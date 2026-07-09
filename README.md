@@ -10,6 +10,8 @@
 | 산출물 | 경로 | 설명 |
 | --- | --- | --- |
 | 📄 기획문서 | [`docs/기획서.md`](docs/기획서.md) | v3.1 상세 기획서 (아키텍처·IA·라벨 표준·로드맵) |
+| 🏗️ 구현 설계서 | [`docs/구현설계.md`](docs/구현설계.md) | Python 기준 기술 설계 (스택·구조·모델·CLI·단계별 설계·테스트) |
+| ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M5) |
 | 🅜 목업 허브 | [`mockups/index.html`](mockups/index.html) | 3개 목업으로 이동하는 시작 페이지 |
 | ① 신규 공간 화면 | [`mockups/confluence-space.html`](mockups/confluence-space.html) | Page Tree · Page Properties · Report · Content by Label |
 | ② 파이프라인/검수 | [`mockups/pipeline-dashboard.html`](mockups/pipeline-dashboard.html) | 6단계 진행 + 사람 검수(Review) UI |
