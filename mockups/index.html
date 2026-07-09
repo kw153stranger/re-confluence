@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confluence AI 재구성 — 목업 허브</title>
+<style>
+  :root{--bg:#f4f5f7;--panel:#ffffff;--ink:#172b4d;--sub:#5e6c84;--line:#dfe1e6;
+    --brand:#0052cc;--brand-soft:#deebff;--brand-ink:#0747a6;--chip:#ebecf0;
+    --shadow:0 1px 3px rgba(9,30,66,.14),0 0 1px rgba(9,30,66,.08);}
+  @media (prefers-color-scheme:dark){:root{--bg:#1b1f27;--panel:#22272e;--ink:#c7d1de;--sub:#8b98a9;
+    --line:#333b45;--brand:#579dff;--brand-soft:#0b2444;--brand-ink:#9dc3ff;--chip:#2c333c;--shadow:0 1px 3px rgba(0,0,0,.4);}}
+  :root[data-theme="dark"]{--bg:#1b1f27;--panel:#22272e;--ink:#c7d1de;--sub:#8b98a9;--line:#333b45;
+    --brand:#579dff;--brand-soft:#0b2444;--brand-ink:#9dc3ff;--chip:#2c333c;--shadow:0 1px 3px rgba(0,0,0,.4);}
+  :root[data-theme="light"]{--bg:#f4f5f7;--panel:#ffffff;--ink:#172b4d;--sub:#5e6c84;--line:#dfe1e6;
+    --brand:#0052cc;--brand-soft:#deebff;--brand-ink:#0747a6;--chip:#ebecf0;--shadow:0 1px 3px rgba(9,30,66,.14);}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6}
+  .hero{max-width:900px;margin:0 auto;padding:56px 22px 8px}
+  .kicker{color:var(--brand);font-weight:700;font-size:13px;letter-spacing:.04em}
+  h1{font-size:30px;margin:6px 0 8px;letter-spacing:-.02em}
+  .lead{color:var(--sub);font-size:15px;max-width:640px}
+  .theme-btn{float:right;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
+  .flow{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 4px}
+  .flow span{background:var(--chip);color:var(--sub);border-radius:16px;padding:3px 11px;font-size:12px;font-weight:600}
+  .flow span::after{content:" →";color:var(--brand)} .flow span:last-child::after{content:""}
+  .grid{max-width:900px;margin:22px auto 0;padding:0 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow);padding:20px;transition:transform .12s,border-color .12s}
+  .card:hover{transform:translateY(-3px);border-color:var(--brand)}
+  .ico{width:46px;height:46px;border-radius:11px;background:var(--brand-soft);color:var(--brand-ink);
+    display:grid;place-items:center;font-size:22px;margin-bottom:12px}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;color:var(--sub);font-size:13px}
+  .num{color:var(--brand);font-weight:800;font-size:12px}
+  .foot{max-width:900px;margin:26px auto 60px;padding:0 22px;color:var(--sub);font-size:13px}
+  .foot a{color:var(--brand)}
+</style>
+</head>
+<body>
+<div class="hero">
+  <button class="theme-btn" onclick="toggleTheme()">🌗 테마</button>
+  <div class="kicker">CONFLUENCE AI 재구성 · MOCKUP v3.1</div>
+  <h1>업무 중심 IA로 재구성한 Confluence</h1>
+  <p class="lead">흩어진 문서를 로컬 LLM(Qwen3-30B-A3B)으로 분석해 <b>업무 → 연도</b> 구조로 재구성하고,
+    라벨·메타데이터를 표준화합니다. 아래는 결과물과 이를 만드는 과정의 화면 목업입니다.</p>
+  <div class="flow">
+    <span>Export</span><span>Analyze</span><span>Cluster</span><span>Build</span><span>Review</span><span>Upload</span>
+  </div>
+</div>
+
+<div class="grid">
+  <a class="card" href="confluence-space.html">
+    <div class="ico">🗂️</div>
+    <div class="num">① 결과물</div>
+    <h3>신규 Confluence 공간</h3>
+    <p>업무 중심 Page Tree, Page Properties, AI 요약, 라벨. Page Properties Report · Content by Label 조회.</p>
+  </a>
+  <a class="card" href="pipeline-dashboard.html">
+    <div class="ico">🛠️</div>
+    <div class="num">② 과정</div>
+    <h3>파이프라인 / 검수 대시보드</h3>
+    <p>6단계 진행 상황 스테퍼와 사람 검수(Review) UI — 추천 분류 확인·수정·승인.</p>
+  </a>
+  <a class="card" href="analysis-json.html">
+    <div class="ico">🧠</div>
+    <div class="num">③ 분석</div>
+    <h3>AI 분류 결과(JSON) 뷰</h3>
+    <p>원본 ↔ Qwen3 추출 JSON 대조, 필드별 신뢰도, 클러스터링·중복 탐지 결과.</p>
+  </a>
+</div>
+
+<div class="foot">
+  📄 상세 기획문서: <a href="../docs/기획서.md">docs/기획서.md</a>
+  · 각 목업 상단 <b>🌗 테마</b> 버튼으로 라이트/다크 전환 가능.
+</div>
+
+<script>
+function toggleTheme(){
+  var r=document.documentElement,cur=r.getAttribute('data-theme');
+  var next=cur==='dark'?'light':(cur==='light'?'dark':(matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark'));
+  r.setAttribute('data-theme',next);
+}
+</script>
+</body>
+</html>

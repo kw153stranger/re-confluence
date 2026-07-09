@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파이프라인 / 검수 대시보드 — 목업</title>
+<style>
+  :root{
+    --bg:#f4f5f7;--panel:#ffffff;--ink:#172b4d;--sub:#5e6c84;--line:#dfe1e6;
+    --brand:#0052cc;--brand-soft:#deebff;--brand-ink:#0747a6;
+    --ok:#00875a;--ok-soft:#e3fcef;--warn:#974f0c;--warn-soft:#fff0b3;
+    --run:#0052cc;--run-soft:#deebff;--wait:#5e6c84;--chip:#ebecf0;
+    --shadow:0 1px 2px rgba(9,30,66,.12),0 0 1px rgba(9,30,66,.08);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#1b1f27;--panel:#22272e;--ink:#c7d1de;--sub:#8b98a9;--line:#333b45;
+      --brand:#579dff;--brand-soft:#0b2444;--brand-ink:#9dc3ff;--chip:#2c333c;
+      --ok:#4bce97;--ok-soft:#123326;--warn:#f5cd47;--warn-soft:#3a2f0b;
+      --run:#579dff;--run-soft:#0b2444;--wait:#8b98a9;--shadow:0 1px 2px rgba(0,0,0,.4);}
+  }
+  :root[data-theme="dark"]{--bg:#1b1f27;--panel:#22272e;--ink:#c7d1de;--sub:#8b98a9;--line:#333b45;
+      --brand:#579dff;--brand-soft:#0b2444;--brand-ink:#9dc3ff;--chip:#2c333c;
+      --ok:#4bce97;--ok-soft:#123326;--warn:#f5cd47;--warn-soft:#3a2f0b;--run:#579dff;--run-soft:#0b2444;--wait:#8b98a9;--shadow:0 1px 2px rgba(0,0,0,.4);}
+  :root[data-theme="light"]{--bg:#f4f5f7;--panel:#ffffff;--ink:#172b4d;--sub:#5e6c84;--line:#dfe1e6;
+      --brand:#0052cc;--brand-soft:#deebff;--brand-ink:#0747a6;--chip:#ebecf0;
+      --ok:#00875a;--ok-soft:#e3fcef;--warn:#974f0c;--warn-soft:#fff0b3;--run:#0052cc;--run-soft:#deebff;--wait:#5e6c84;--shadow:0 1px 2px rgba(9,30,66,.12);}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+  a{color:var(--brand)}
+  .banner{background:var(--warn-soft);color:var(--warn);text-align:center;padding:6px;font-size:12px;font-weight:600}
+  .topbar{display:flex;align-items:center;gap:14px;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 18px}
+  .logo{width:26px;height:26px;border-radius:6px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800}
+  .topbar .sp{font-weight:700}.topbar .muted{color:var(--sub);font-size:12px}
+  .theme-btn{margin-left:auto;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
+  .page{max-width:1080px;margin:0 auto;padding:22px 20px}
+  h2{font-size:18px;margin:26px 0 12px}
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px}
+  .stat .n{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .stat .l{color:var(--sub);font-size:12.5px;margin-top:2px}
+  .stat .k{font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-bottom:8px}
+  .k-blue{background:var(--brand-soft);color:var(--brand-ink)}.k-ok{background:var(--ok-soft);color:var(--ok)}
+  .k-warn{background:var(--warn-soft);color:var(--warn)}.k-gray{background:var(--chip);color:var(--sub)}
+  /* stepper */
+  .stepper{display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:16px;overflow-x:auto}
+  .step{flex:1;min-width:132px;text-align:center;position:relative;padding:6px 4px}
+  .step:not(:last-child)::after{content:"→";position:absolute;right:-8px;top:26px;color:var(--sub)}
+  .dot{width:40px;height:40px;border-radius:50%;margin:0 auto 8px;display:grid;place-items:center;font-size:18px;
+    border:2px solid var(--line);background:var(--bg)}
+  .step.done .dot{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+  .step.run .dot{background:var(--run-soft);border-color:var(--run);color:var(--run)}
+  .step.wait .dot{color:var(--wait)}
+  .step .nm{font-weight:700;font-size:13.5px}
+  .step .st{font-size:11.5px;color:var(--sub)}
+  .step .ct{font-size:11.5px;margin-top:3px}
+  .step.done .st{color:var(--ok)}.step.run .st{color:var(--run);font-weight:700}
+  .progress{height:6px;background:var(--chip);border-radius:6px;overflow:hidden;margin-top:6px}
+  .progress > i{display:block;height:100%;background:var(--run);border-radius:6px}
+  /* review table */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:0;overflow:hidden}
+  .phead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .phead .t{font-weight:700}
+  .phead .meta{color:var(--sub);font-size:12.5px}
+  .phead .right{margin-left:auto;display:flex;gap:8px}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  .scroll{overflow-x:auto}
+  table.rev{width:100%;border-collapse:collapse;min-width:820px;font-size:13px}
+  table.rev th,table.rev td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+  table.rev th{background:var(--bg);color:var(--sub);font-weight:600;white-space:nowrap}
+  .doc .dt{font-weight:600}.doc .dm{color:var(--sub);font-size:11.5px}
+  select.sel{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:5px 8px;font-size:12.5px}
+  .lab{display:inline-block;background:var(--brand-soft);color:var(--brand-ink);border-radius:16px;padding:2px 9px;font-size:11.5px;margin:1px 2px}
+  .conf{font-weight:700}.c-hi{color:var(--ok)}.c-mid{color:var(--warn)}.c-lo{color:#bf2600}
+  @media (prefers-color-scheme:dark){.c-lo{color:#ff9c8f}}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+  .b-dup{background:var(--warn-soft);color:var(--warn)}
+  .act{display:flex;gap:6px}
+  .ic{border:1px solid var(--line);background:var(--panel);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px}
+  .ic.ok{color:var(--ok)}.ic.no{color:#bf2600}
+  .foot{color:var(--sub);font-size:12px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="banner">🅜 목업(Mockup) — 파이프라인 진행 상황 및 사람 검수(Review) 화면 미리보기입니다.</div>
+<div class="topbar">
+  <div class="logo">R</div>
+  <div><div class="sp">Confluence AI 재구성 — 파이프라인 콘솔</div>
+  <div class="muted">배치 실행 #2026-07-09-01 · 원본 Space: DOCS (읽기전용)</div></div>
+  <button class="theme-btn" onclick="toggleTheme()">🌗 테마</button>
+</div>
+
+<div class="page">
+  <!-- 요약 통계 -->
+  <div class="stats">
+    <div class="stat"><span class="k k-blue">수집</span><div class="n">1,284</div><div class="l">수집 문서 (Exported pages)</div></div>
+    <div class="stat"><span class="k k-ok">분류</span><div class="n">1,180</div><div class="l">분류 완료 (Analyzed)</div></div>
+    <div class="stat"><span class="k k-warn">중복</span><div class="n">96</div><div class="l">중복 후보 (Duplicate candidates)</div></div>
+    <div class="stat"><span class="k k-gray">검수</span><div class="n">312</div><div class="l">검수 대기 (Pending review)</div></div>
+  </div>
+
+  <!-- 파이프라인 스테퍼 -->
+  <h2>파이프라인 진행 (Pipeline)</h2>
+  <div class="stepper">
+    <div class="step done"><div class="dot">✓</div><div class="nm">Export</div><div class="st">완료</div><div class="ct">1,284 pages</div></div>
+    <div class="step done"><div class="dot">✓</div><div class="nm">Analyze</div><div class="st">완료</div><div class="ct">1,180 JSON</div></div>
+    <div class="step done"><div class="dot">✓</div><div class="nm">Cluster</div><div class="st">완료</div><div class="ct">42 업무 · 96 중복</div></div>
+    <div class="step run"><div class="dot">●</div><div class="nm">Build</div><div class="st">진행 중</div><div class="ct">868 / 1,180</div>
+      <div class="progress"><i style="width:74%"></i></div></div>
+    <div class="step run"><div class="dot">◐</div><div class="nm">Review</div><div class="st">검수 중</div><div class="ct">868 대기 · 312 완료</div></div>
+    <div class="step wait"><div class="dot">↑</div><div class="nm">Upload</div><div class="st">대기</div><div class="ct">승인 시 반영</div></div>
+  </div>
+
+  <!-- 검수 UI -->
+  <h2>검수 (Review) — 분류 결과 확인·수정</h2>
+  <div class="panel">
+    <div class="phead">
+      <span class="t">검수 큐 (Review queue)</span>
+      <span class="meta">추천값을 확인하고 필요 시 수정 후 승인하세요. 낮은 신뢰도·중복 후보 우선.</span>
+      <span class="right">
+        <button class="btn">선택 반려</button>
+        <button class="btn primary">선택 승인 (Approve)</button>
+      </span>
+    </div>
+    <div class="scroll">
+      <table class="rev">
+        <thead><tr>
+          <th><input type="checkbox"></th><th>원본 문서</th><th>추천 업무</th><th>연도</th>
+          <th>추천 라벨</th><th>신뢰도</th><th>비고</th><th>액션</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" checked></td>
+            <td class="doc"><div class="dt">2024년 상반기 구매 정산 절차</div><div class="dm">홍길동 · 원본 123456</div></td>
+            <td><select class="sel"><option>구매관리 ✓</option><option>재무관리</option></select></td>
+            <td><select class="sel"><option>2024 ✓</option><option>2023</option></select></td>
+            <td><span class="lab">업무/구매관리</span><span class="lab">시스템/ERP</span><span class="lab">연도/2024</span></td>
+            <td class="conf c-hi">0.92</td>
+            <td>—</td>
+            <td class="act"><button class="ic ok" title="승인">✓</button><button class="ic no" title="반려">✕</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td class="doc"><div class="dt">정산 프로세스 (임시)</div><div class="dm">홍길동 · 원본 123401</div></td>
+            <td><select class="sel"><option>구매관리 ✓</option><option>재무관리</option></select></td>
+            <td><select class="sel"><option>2024 ✓</option><option>2023</option></select></td>
+            <td><span class="lab">업무/구매관리</span><span class="lab">연도/2024</span></td>
+            <td class="conf c-mid">0.63</td>
+            <td><span class="badge b-dup">중복후보 ↔ 123456 (94%)</span></td>
+            <td class="act"><button class="ic ok" title="승인">✓</button><button class="ic no" title="반려">✕</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td class="doc"><div class="dt">배포 체크리스트 v2</div><div class="dm">최민 · 원본 220914</div></td>
+            <td><select class="sel"><option>배포관리 ✓</option><option>시스템 운영</option></select></td>
+            <td><select class="sel"><option>2024 ✓</option><option>2025</option></select></td>
+            <td><span class="lab">업무/배포관리</span><span class="lab">시스템/ERP</span><span class="lab">연도/2024</span></td>
+            <td class="conf c-hi">0.88</td>
+            <td>—</td>
+            <td class="act"><button class="ic ok" title="승인">✓</button><button class="ic no" title="반려">✕</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td class="doc"><div class="dt">회의록 20230512</div><div class="dm">익명 · 원본 118820</div></td>
+            <td><select class="sel"><option>미분류 ⚠</option><option>시스템 운영</option><option>인사·총무</option></select></td>
+            <td><select class="sel"><option>2023 ✓</option><option>미상</option></select></td>
+            <td><span class="lab">연도/2023</span></td>
+            <td class="conf c-lo">0.41</td>
+            <td><span class="badge b-dup">저신뢰 · 검토 필요</span></td>
+            <td class="act"><button class="ic ok" title="승인">✓</button><button class="ic no" title="반려">✕</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="foot">
+    승인된 문서만 <b>Upload</b> 대상에 포함됩니다. 검수 내역은 <code>vault/review.json</code>에 저장되어 재실행 시 반영됩니다.<br>
+    ← <a href="index.html">목업 허브로</a> · <a href="confluence-space.html">신규 공간 화면</a> · <a href="analysis-json.html">AI 분류 결과(JSON) 뷰 →</a>
+  </p>
+</div>
+
+<script>
+function toggleTheme(){
+  var r=document.documentElement,cur=r.getAttribute('data-theme');
+  var next=cur==='dark'?'light':(cur==='light'?'dark':(matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark'));
+  r.setAttribute('data-theme',next);
+}
+</script>
+</body>
+</html>
