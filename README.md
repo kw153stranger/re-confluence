@@ -3,7 +3,8 @@
 흩어진 Confluence 문서를 **MCP**로 수집하고 **로컬 LLM(Qwen3-30B-A3B)** 으로 분석해,
 **업무 중심 정보구조(IA)** 로 재구성한 뒤 신규 Confluence 공간에 반영하는 프로젝트입니다.
 
-> 현재 단계(M1): **기획문서 + 화면 목업**. 파이프라인 실제 구현은 후속 단계(M2~).
+> 진행: **M1(기획·목업) 완료**, **M0(부트스트랩) 완료** — `reconf` CLI 뼈대·모델·설정·테스트·CI.
+> 다음: M2(Export→Analyze→Cluster) 실제 구현.
 
 ## 산출물 (Deliverables)
 
@@ -11,7 +12,8 @@
 | --- | --- | --- |
 | 📄 기획문서 | [`docs/기획서.md`](docs/기획서.md) | v3.1 상세 기획서 (아키텍처·IA·라벨 표준·로드맵) |
 | 🏗️ 구현 설계서 | [`docs/구현설계.md`](docs/구현설계.md) | Python 기준 기술 설계 (스택·구조·모델·CLI·단계별 설계·테스트) |
-| ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M5) |
+| ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M6) |
+| 🧩 코어 코드 | [`src/reconf/`](src/reconf) | `reconf` CLI·모델·설정·저장소 (M0 부트스트랩) |
 | 🅜 목업 허브 | [`mockups/index.html`](mockups/index.html) | 3개 목업으로 이동하는 시작 페이지 |
 | ① 신규 공간 화면 | [`mockups/confluence-space.html`](mockups/confluence-space.html) | Page Tree · Page Properties · Report · Content by Label |
 | ② 파이프라인/검수 | [`mockups/pipeline-dashboard.html`](mockups/pipeline-dashboard.html) | 6단계 진행 + 사람 검수(Review) UI |
@@ -30,6 +32,25 @@ xdg-open mockups/index.html
 
 - 라이트/다크 모드 모두 대응하며, 각 화면 상단 **🌗 테마** 버튼으로 전환할 수 있습니다.
 - `mockups/index.html`에서 시작해 3개 화면을 둘러보세요.
+
+## 개발 (Development)
+
+`reconf` CLI 파이프라인의 코드는 `src/reconf/`에 있습니다 (Python 3.11+).
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"          # 패키지 + 개발 의존성(pytest, ruff)
+
+reconf --help                    # 6개 서브커맨드 확인
+reconf export --vault ./vault    # (M0: 스텁) 단계 실행
+
+ruff check .                     # lint
+pytest -q                        # 테스트
+```
+
+- 설정은 `config.example.yaml`을 복사해 `config.yaml`로 사용 (`--config` 옵션).
+- 비밀값(Confluence 토큰 등)은 파일이 아닌 **환경변수**로 주입합니다.
+- 각 단계는 독립 실행되며 중간 산출물을 `vault/`에 저장합니다. 상세: [`docs/구현설계.md`](docs/구현설계.md).
 
 ## 파이프라인 6단계 (요약)
 

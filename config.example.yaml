@@ -1,0 +1,29 @@
+# Confluence AI 재구성 — 설정 예시 (구현설계 §7)
+# 비밀값(Confluence 토큰 등)은 이 파일이 아닌 환경변수로 주입한다.
+
+source:
+  space: "DOCS"
+  filter: { since: "2020-01-01", labels: [] }
+target:
+  space: "RE-ARCHIVE"
+llm:
+  endpoint: "http://localhost:8000/v1"   # vLLM/Ollama OpenAI 호환
+  model: "qwen3-30b-a3b"
+  max_retries: 3
+embeddings:
+  provider: "tei"                         # HuggingFace Text Embeddings Inference
+  endpoint: "http://localhost:8080"       # TEI 서버 (POST /embed)
+  model: "BAAI/bge-m3"
+  dim: 1024                               # bge-m3 임베딩 차원
+  batch_size: 32                          # 1회 요청 문장 수
+  normalize: true                         # 정규화 후 코사인 유사도
+  timeout_s: 30
+  cache: true                             # embeddings/<page_id>.json 재사용
+cluster:
+  sim_threshold: 0.90
+labels:
+  namespaces: ["업무", "시스템", "연도", "상태"]
+  registry: "labels.json"                 # 전역 라벨 마스터 경로
+  merge_fuzzy_threshold: 90               # rapidfuzz 표기 유사도(0~100)
+  merge_embed_threshold: 0.92             # 라벨 임베딩 코사인 유사도
+vault: "./vault"
