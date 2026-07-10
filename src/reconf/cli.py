@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import Annotated
 
 import typer
@@ -38,6 +39,16 @@ def _prepare(config: str | None, vault: str | None) -> tuple[Config, Store]:
     return cfg, store
 
 
+@contextmanager
+def _friendly_errors():
+    """설정 누락 등 RuntimeError를 traceback 없이 깔끔히 종료(exit 1)."""
+    try:
+        yield
+    except RuntimeError as e:
+        typer.secho(f"오류: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from None
+
+
 @app.command()
 def version() -> None:
     """버전 출력."""
@@ -55,7 +66,8 @@ def export(
     cfg, store = _prepare(config, vault)
     from . import export as _stage
 
-    _stage.run(cfg, store, resume=resume, dry_run=dry_run)
+    with _friendly_errors():
+        _stage.run(cfg, store, resume=resume, dry_run=dry_run)
 
 
 @app.command()
@@ -69,7 +81,8 @@ def analyze(
     cfg, store = _prepare(config, vault)
     from . import analyze as _stage
 
-    _stage.run(cfg, store, resume=resume, dry_run=dry_run)
+    with _friendly_errors():
+        _stage.run(cfg, store, resume=resume, dry_run=dry_run)
 
 
 @app.command()
@@ -83,7 +96,8 @@ def cluster(
     cfg, store = _prepare(config, vault)
     from . import cluster as _stage
 
-    _stage.run(cfg, store, resume=resume, dry_run=dry_run)
+    with _friendly_errors():
+        _stage.run(cfg, store, resume=resume, dry_run=dry_run)
 
 
 @app.command()

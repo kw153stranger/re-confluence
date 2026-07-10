@@ -85,3 +85,26 @@ class Store:
     @property
     def review_path(self) -> Path:
         return self.root / "review.json"
+
+    # --- raw(Markdown+frontmatter) I/O ---
+    def raw_path(self, page_id: str, slug: str) -> Path:
+        return self.raw_dir / f"{page_id}__{slug}.md"
+
+    def write_raw(self, page_id: str, slug: str, text: str) -> Path:
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+        # 같은 page_id의 기존 파일(slug 변경 대비) 제거 후 저장 → 멱등
+        for old in self.raw_dir.glob(f"{page_id}__*.md"):
+            old.unlink()
+        path = self.raw_path(page_id, slug)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def list_raw(self) -> list[Path]:
+        return sorted(self.raw_dir.glob("*__*.md"))
+
+    def find_raw(self, page_id: str) -> Path | None:
+        matches = list(self.raw_dir.glob(f"{page_id}__*.md"))
+        return matches[0] if matches else None
+
+    def list_analysis(self) -> list[Path]:
+        return sorted(self.analysis_dir.glob("*.json"))

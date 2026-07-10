@@ -3,8 +3,8 @@
 흩어진 Confluence 문서를 **MCP**로 수집하고 **로컬 LLM(Qwen3-30B-A3B)** 으로 분석해,
 **업무 중심 정보구조(IA)** 로 재구성한 뒤 신규 Confluence 공간에 반영하는 프로젝트입니다.
 
-> 진행: **M1(기획·목업) 완료**, **M0(부트스트랩) 완료** — `reconf` CLI 뼈대·모델·설정·테스트·CI.
-> 다음: M2(Export→Analyze→Cluster) 실제 구현.
+> 진행: **M1·M0 완료**, **M2(Export→Analyze→Cluster) 로직 구현+테스트 완료**(실 서비스 스모크 잔여).
+> 다음: M3(Build·Review).
 
 ## 산출물 (Deliverables)
 

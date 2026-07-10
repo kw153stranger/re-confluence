@@ -16,6 +16,20 @@ STATUS_CANONICAL = "정본"
 STATUS_DUPLICATE = "중복후보"
 
 
+class RawDoc(BaseModel):
+    """Export 산출물 — raw/<page_id>__<slug>.md 의 frontmatter + 본문 (기획서 §4.1)."""
+
+    source_page_id: str
+    source_url: str = ""
+    title: str = ""
+    author: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    original_labels: list[str] = Field(default_factory=list)
+    attachments: list[str] = Field(default_factory=list)
+    body_markdown: str = ""
+
+
 class Confidence(BaseModel):
     """필드별 분류 신뢰도 (0~1). 0.7 미만은 검수 우선 대상."""
 
