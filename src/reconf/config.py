@@ -49,6 +49,20 @@ class LabelsCfg(BaseModel):
     merge_embed_threshold: float = 0.92
 
 
+class DBCfg(BaseModel):
+    """M6 저장/벡터 백엔드 (구현설계 §12.2, §12.6)."""
+
+    backend: str = "file"  # "file" | "postgres"
+    dsn: str = ""  # postgres 연결 문자열(비밀은 환경변수 권장)
+
+
+class WebCfg(BaseModel):
+    """M6 웹서비스 (구현설계 §12)."""
+
+    host: str = "127.0.0.1"
+    port: int = 8000
+
+
 class Config(BaseModel):
     source: SourceCfg = Field(default_factory=SourceCfg)
     target: TargetCfg = Field(default_factory=TargetCfg)
@@ -56,6 +70,8 @@ class Config(BaseModel):
     embeddings: EmbeddingsCfg = Field(default_factory=EmbeddingsCfg)
     cluster: ClusterCfg = Field(default_factory=ClusterCfg)
     labels: LabelsCfg = Field(default_factory=LabelsCfg)
+    db: DBCfg = Field(default_factory=DBCfg)
+    web: WebCfg = Field(default_factory=WebCfg)
     vault: str = "./vault"
 
     @classmethod

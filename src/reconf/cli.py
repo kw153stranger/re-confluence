@@ -56,6 +56,25 @@ def version() -> None:
 
 
 @app.command()
+def serve(
+    config: ConfigOpt = None,
+    vault: VaultOpt = None,
+    host: Annotated[str | None, typer.Option("--host", help="바인드 호스트")] = None,
+    port: Annotated[int | None, typer.Option("--port", help="포트")] = None,
+) -> None:
+    """[M6] 웹서비스(FastAPI) 실행 — 검수·의미검색·파이프라인 오케스트레이션."""
+    cfg, store = _prepare(config, vault)
+    try:
+        import uvicorn
+
+        from .web.app import create_app
+    except ImportError as e:
+        typer.secho(f"오류: 웹 의존성이 없습니다. pip install '.[web]' ({e})", fg="red", err=True)
+        raise typer.Exit(1) from None
+    uvicorn.run(create_app(store, cfg), host=host or cfg.web.host, port=port or cfg.web.port)
+
+
+@app.command()
 def export(
     config: ConfigOpt = None,
     vault: VaultOpt = None,

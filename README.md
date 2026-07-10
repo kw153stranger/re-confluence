@@ -3,8 +3,9 @@
 흩어진 Confluence 문서를 **MCP**로 수집하고 **로컬 LLM(Qwen3-30B-A3B)** 으로 분석해,
 **업무 중심 정보구조(IA)** 로 재구성한 뒤 신규 Confluence 공간에 반영하는 프로젝트입니다.
 
-> 진행: **6단계 배치 파이프라인(M0~M4) 로직 구현+테스트 완료** — Export→Analyze→Cluster→Build→Review→Upload.
-> fake 클라이언트로 전체 E2E 검증(41 tests). 실 서비스 스모크·M5(하드닝)·M6(웹서비스)는 후속.
+> 진행: **배치 파이프라인(M0~M4) + 웹서비스·벡터DB(M6) 로직 구현+테스트 완료**.
+> Export→Analyze→Cluster→Build→Review→Upload + FastAPI(검수·의미검색·오케스트레이션). 47 tests.
+> 실 서비스 스모크·pgvector 실적재·프런트·M5(하드닝)는 후속.
 > 단계별 점검 항목: [`docs/단계별점검리스트.md`](docs/단계별점검리스트.md).
 
 ## 산출물 (Deliverables)
@@ -16,6 +17,7 @@
 | ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M6) |
 | 🔎 단계별 점검 | [`docs/단계별점검리스트.md`](docs/단계별점검리스트.md) | 각 단계 실행 후 점검 항목·확인 방법·대응 |
 | 🧩 코어 코드 | [`src/reconf/`](src/reconf) | `reconf` CLI 6단계 파이프라인·모델·설정·저장소 |
+| 🌐 웹서비스·벡터DB | [`src/reconf/web/`](src/reconf/web) · [`migrations/`](migrations) | FastAPI(검수·검색·오케스트레이션) + pgvector 스키마 (M6) |
 | 🅜 목업 허브 | [`mockups/index.html`](mockups/index.html) | 3개 목업으로 이동하는 시작 페이지 |
 | ① 신규 공간 화면 | [`mockups/confluence-space.html`](mockups/confluence-space.html) | Page Tree · Page Properties · Report · Content by Label |
 | ② 파이프라인/검수 | [`mockups/pipeline-dashboard.html`](mockups/pipeline-dashboard.html) | 6단계 진행 + 사람 검수(Review) UI |
@@ -43,16 +45,28 @@ xdg-open mockups/index.html
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"          # 패키지 + 개발 의존성(pytest, ruff)
 
-reconf --help                    # 6개 서브커맨드 확인
-reconf export --vault ./vault    # (M0: 스텁) 단계 실행
+reconf --help                    # 서브커맨드 확인
+reconf export --vault ./vault    # 단계 실행 (실 수집은 CONFLUENCE_* 환경변수 필요)
 
 ruff check .                     # lint
-pytest -q                        # 테스트
+pytest -q                        # 테스트 (47 passed)
 ```
 
 - 설정은 `config.example.yaml`을 복사해 `config.yaml`로 사용 (`--config` 옵션).
 - 비밀값(Confluence 토큰 등)은 파일이 아닌 **환경변수**로 주입합니다.
 - 각 단계는 독립 실행되며 중간 산출물을 `vault/`에 저장합니다. 상세: [`docs/구현설계.md`](docs/구현설계.md).
+
+### 웹서비스 (M6)
+
+```bash
+pip install -e ".[web]"          # FastAPI + uvicorn
+reconf serve --vault ./vault     # http://127.0.0.1:8000
+```
+
+- API: `POST /api/runs`·`GET /api/runs/{id}`(오케스트레이션), `GET /api/review/queue`·
+  `POST /api/review/decisions`(검수), `POST /api/labels/resolve`(라벨 거버넌스), `POST /api/search`(의미 검색).
+- 벡터DB: 기본은 파일 기반(`FileVectorStore`). Postgres/pgvector는 `pip install -e ".[postgres]"` +
+  `migrations/001_init.sql` 적용 후 `config.db.backend=postgres`. 상세: [`docs/구현설계.md`](docs/구현설계.md) §12.
 
 ## 파이프라인 6단계 (요약)
 

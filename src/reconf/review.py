@@ -80,6 +80,19 @@ def apply_decisions(
             log.info("[Review] 라벨 후보 %d건 승인(approved)", promoted)
 
 
+def load_queue(store: Store) -> list[ReviewQueueItem]:
+    """store에서 검수 큐를 계산한다(웹 API·CLI 공용)."""
+    analyses = {p.stem: store.read_json(p, AnalysisResult) for p in store.list_analysis()}
+    clusters = []
+    if store.exists(store.clusters_path):
+        clusters = _ClusterList.model_validate_json(store.clusters_path.read_text("utf-8")).root
+    titles = {}
+    for p in store.list_raw():
+        d = parse_raw(p.read_text(encoding="utf-8"))
+        titles[d.source_page_id] = d.title
+    return build_queue(analyses, clusters, titles)
+
+
 def run(
     cfg: Config,
     store: Store,
@@ -92,17 +105,7 @@ def run(
     store.ensure_dirs()
 
     if export_queue:
-        analyses = {p.stem: store.read_json(p, AnalysisResult) for p in store.list_analysis()}
-        clusters = []
-        if store.exists(store.clusters_path):
-            clusters = _ClusterList.model_validate_json(
-                store.clusters_path.read_text("utf-8")
-            ).root
-        titles = {}
-        for p in store.list_raw():
-            d = parse_raw(p.read_text(encoding="utf-8"))
-            titles[d.source_page_id] = d.title
-        queue = build_queue(analyses, clusters, titles)
+        queue = load_queue(store)
         if not dry_run:
             (store.root / "review_queue.json").write_text(
                 _QueueList(queue).model_dump_json(indent=2), encoding="utf-8"
