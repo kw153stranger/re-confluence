@@ -3,8 +3,9 @@
 흩어진 Confluence 문서를 **MCP**로 수집하고 **로컬 LLM(Qwen3-30B-A3B)** 으로 분석해,
 **업무 중심 정보구조(IA)** 로 재구성한 뒤 신규 Confluence 공간에 반영하는 프로젝트입니다.
 
-> 진행: **M1·M0 완료**, **M2(Export→Analyze→Cluster) 로직 구현+테스트 완료**(실 서비스 스모크 잔여).
-> 다음: M3(Build·Review).
+> 진행: **6단계 배치 파이프라인(M0~M4) 로직 구현+테스트 완료** — Export→Analyze→Cluster→Build→Review→Upload.
+> fake 클라이언트로 전체 E2E 검증(41 tests). 실 서비스 스모크·M5(하드닝)·M6(웹서비스)는 후속.
+> 단계별 점검 항목: [`docs/단계별점검리스트.md`](docs/단계별점검리스트.md).
 
 ## 산출물 (Deliverables)
 
@@ -13,7 +14,8 @@
 | 📄 기획문서 | [`docs/기획서.md`](docs/기획서.md) | v3.1 상세 기획서 (아키텍처·IA·라벨 표준·로드맵) |
 | 🏗️ 구현 설계서 | [`docs/구현설계.md`](docs/구현설계.md) | Python 기준 기술 설계 (스택·구조·모델·CLI·단계별 설계·테스트) |
 | ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M6) |
-| 🧩 코어 코드 | [`src/reconf/`](src/reconf) | `reconf` CLI·모델·설정·저장소 (M0 부트스트랩) |
+| 🔎 단계별 점검 | [`docs/단계별점검리스트.md`](docs/단계별점검리스트.md) | 각 단계 실행 후 점검 항목·확인 방법·대응 |
+| 🧩 코어 코드 | [`src/reconf/`](src/reconf) | `reconf` CLI 6단계 파이프라인·모델·설정·저장소 |
 | 🅜 목업 허브 | [`mockups/index.html`](mockups/index.html) | 3개 목업으로 이동하는 시작 페이지 |
 | ① 신규 공간 화면 | [`mockups/confluence-space.html`](mockups/confluence-space.html) | Page Tree · Page Properties · Report · Content by Label |
 | ② 파이프라인/검수 | [`mockups/pipeline-dashboard.html`](mockups/pipeline-dashboard.html) | 6단계 진행 + 사람 검수(Review) UI |

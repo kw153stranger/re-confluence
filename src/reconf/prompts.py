@@ -31,6 +31,14 @@ ANALYZE_SYSTEM = """당신은 사내 문서를 분류하는 도우미입니다.
 - 반드시 유효한 JSON 하나만 출력."""
 
 
+SUMMARIZE_SYSTEM = """다음 문서 조각을 사실 위주로 3~5문장으로 요약하세요.
+숫자·고유명사·업무/시스템/연도 단서를 보존하고, 군더더기는 제거합니다."""
+
+
+def build_summarize_user(chunk: str) -> str:
+    return chunk
+
+
 def build_analyze_user(doc: RawDoc, body_limit: int = 6000) -> str:
     body = doc.body_markdown[:body_limit]
     return (

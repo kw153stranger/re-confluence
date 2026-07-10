@@ -110,3 +110,55 @@ class LabelRegistry(BaseModel):
     """전역 라벨 마스터."""
 
     entries: list[LabelEntry] = Field(default_factory=list)
+
+
+class BuildPage(BaseModel):
+    """Build 산출물 페이지 메타 — build/<page_id>.md 에 대응."""
+
+    source_page_id: str
+    title: str
+    business: str
+    year: int | None = None
+    role: str = "canonical"  # canonical | duplicate | related
+    labels: list[str] = Field(default_factory=list)
+    properties: PageProperties
+    summary: str = ""
+
+
+class YearGroup(BaseModel):
+    year: int | None = None
+    page_ids: list[str] = Field(default_factory=list)
+
+
+class BusinessGroup(BaseModel):
+    business: str
+    index_page_id: str
+    years: list[YearGroup] = Field(default_factory=list)
+
+
+class BuildTree(BaseModel):
+    """업무 중심 Page Tree — build/tree.json."""
+
+    businesses: list[BusinessGroup] = Field(default_factory=list)
+
+
+class UploadResult(BaseModel):
+    """Upload 결과 — upload.log (성공/실패 + 멱등 키 매핑)."""
+
+    source_page_id: str
+    status: str  # created | updated | failed | skipped
+    target_page_id: str | None = None
+    error: str | None = None
+
+
+class ReviewQueueItem(BaseModel):
+    """검수 큐 항목 — review_queue.json (저신뢰·중복 우선)."""
+
+    source_page_id: str
+    title: str
+    business: str | None = None
+    year: int | None = None
+    labels: list[str] = Field(default_factory=list)
+    min_confidence: float = 1.0
+    role: str = "canonical"
+    duplicate_of: str | None = None

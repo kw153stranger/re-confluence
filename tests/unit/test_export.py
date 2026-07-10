@@ -31,7 +31,10 @@ class FakeConfluence:
         return self._pages[page_id]
 
     def get_attachments(self, page_id):
-        return [{"title": "정산표.xlsx"}]
+        return [{"title": "정산표.xlsx", "_links": {"download": f"/dl/{page_id}"}}]
+
+    def download_attachment(self, attachment):
+        return b"BINARY-DATA"
 
 
 def test_export_writes_raw(tmp_path):
@@ -46,6 +49,9 @@ def test_export_writes_raw(tmp_path):
     assert doc.source_url == "https://confluence.example.com/pages/1"
     assert doc.attachments == ["정산표.xlsx"]
     assert "정산" in doc.body_markdown
+    # 첨부 바이너리 저장 확인
+    att = store.raw_dir / "attachments" / "1" / "정산표.xlsx"
+    assert att.exists() and att.read_bytes() == b"BINARY-DATA"
 
 
 def test_export_idempotent_skip_when_unchanged(tmp_path):

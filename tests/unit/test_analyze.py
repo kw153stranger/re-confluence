@@ -54,6 +54,27 @@ def test_complete_json_raises_after_max_retries():
         complete_json(client, "sys", "user", max_retries=3)
 
 
+def test_condense_body_chunks_long_doc():
+    from reconf.analyze import condense_body
+
+    long_body = "가" * 25  # chunk_chars=10 → 3 청크
+    doc = RawDoc(source_page_id="1", title="t", body_markdown=long_body)
+    client = FakeLLM(["요약1", "요약2", "요약3"])
+    out = condense_body(client, doc, chunk_chars=10)
+    assert client.calls == 3
+    assert out.body_markdown == "요약1\n요약2\n요약3"
+
+
+def test_condense_body_skips_short_doc():
+    from reconf.analyze import condense_body
+
+    doc = RawDoc(source_page_id="1", title="t", body_markdown="짧음")
+    client = FakeLLM([])
+    out = condense_body(client, doc, chunk_chars=100)
+    assert client.calls == 0
+    assert out is doc
+
+
 def test_analyze_run_writes_analysis(tmp_path):
     store = Store(tmp_path / "vault")
     store.ensure_dirs()

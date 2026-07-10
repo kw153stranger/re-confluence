@@ -106,5 +106,12 @@ class Store:
         matches = list(self.raw_dir.glob(f"{page_id}__*.md"))
         return matches[0] if matches else None
 
+    def write_attachment(self, page_id: str, name: str, data: bytes) -> Path:
+        d = self.raw_dir / "attachments" / page_id
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / name
+        path.write_bytes(data)
+        return path
+
     def list_analysis(self) -> list[Path]:
         return sorted(self.analysis_dir.glob("*.json"))

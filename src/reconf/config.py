@@ -24,6 +24,7 @@ class LLMCfg(BaseModel):
     endpoint: str = "http://localhost:8000/v1"  # vLLM/Ollama OpenAI 호환
     model: str = "qwen3-30b-a3b"
     max_retries: int = 3
+    chunk_chars: int = 8000  # 본문이 이보다 길면 청크 요약 후 통합
 
 
 class EmbeddingsCfg(BaseModel):

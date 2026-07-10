@@ -148,7 +148,8 @@ def upload(
     cfg, store = _prepare(config, vault)
     from . import upload as _stage
 
-    _stage.run(cfg, store, target_space=target_space, resume=resume, dry_run=dry_run)
+    with _friendly_errors():
+        _stage.run(cfg, store, target_space=target_space, resume=resume, dry_run=dry_run)
 
 
 if __name__ == "__main__":

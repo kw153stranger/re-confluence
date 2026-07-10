@@ -76,6 +76,10 @@ def run(
         saved.append(doc)
         if not dry_run:
             store.write_raw(doc.source_page_id, slugify(doc.title), dump_raw(doc))
+            for att in attachments:
+                data = client.download_attachment(att)
+                if data:
+                    store.write_attachment(page_id, att.get("title", "attachment"), data)
 
     log.info("[Export] 저장 %d건, 스킵(변경없음) %d건 (dry_run=%s)", len(saved), skipped, dry_run)
     return saved
