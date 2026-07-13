@@ -1,7 +1,7 @@
 """Confluence storage 렌더링 검증 — Page Properties 매크로 + 원문."""
 
 from reconf.models import BuildPage, PageProperties
-from reconf.storagefmt import details_macro, render_page
+from reconf.storagefmt import details_macro, render_overview, render_page, report_macro
 
 
 def _props():
@@ -38,3 +38,18 @@ def test_render_page_falls_back_to_markdown():
     )
     out = render_page(page)
     assert "<p>라인1</p>" in out and "<p>라인2</p>" in out
+
+
+def test_report_macro_uses_cql():
+    m = report_macro('label = "업무/SSL 적용"')
+    assert 'ac:name="detailssummary"' in m
+    assert 'label = "업무/SSL 적용"' in m
+
+
+def test_render_overview_lists_systems_years_and_report():
+    out = render_overview("SSL 적용", ["Nginx", "Apache"], {2024: 2, 2025: 1})
+    assert "SSL 적용 개요" in out
+    assert "Nginx" in out and "Apache" in out
+    assert "2024" in out and "2025" in out
+    assert "detailssummary" in out
+    assert 'label = "업무/SSL 적용"' in out

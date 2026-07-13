@@ -54,6 +54,14 @@ def test_duplicate_detected_and_canonical_latest(tmp_path):
     assert store.clusters_path.exists()
 
 
+def test_normalize_task_merges_spacing_variants():
+    from reconf.cluster import normalize_task
+
+    assert normalize_task("SSL  적용") == "SSL 적용"
+    assert normalize_task(" SSL 적용 ") == "SSL 적용"
+    assert normalize_task(None) == "미분류"
+
+
 def test_no_duplicate_when_dissimilar(tmp_path):
     store = Store(tmp_path / "vault")
     _seed(store, "1", "구매관리", 2024, "발주 가이드", "발주 내용")

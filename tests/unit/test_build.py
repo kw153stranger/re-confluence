@@ -62,6 +62,22 @@ def test_build_produces_pages_tree_and_labels(tmp_path):
     md = (store.build_dir / "1.md").read_text(encoding="utf-8")
     assert "Page Properties" in md and "구매관리" in md
 
+    # 새 IA: 업무 → {개요, 작업실적 → 연도}
+    from reconf.models import BuildTree
+
+    tree = BuildTree.model_validate_json((store.build_dir / "tree.json").read_text("utf-8"))
+    gm = {g.business: g for g in tree.businesses}
+    assert set(gm) == {"구매관리", "배포관리"}
+    g = gm["구매관리"]
+    assert g.business_page_id == "biz-구매관리"
+    assert g.overview_page_id == "overview-구매관리"
+    assert g.worklog_page_id == "worklog-구매관리"
+    assert [y.year for y in g.years] == [2024]
+    # 개요 본문에 Page Properties Report 매크로 + 시스템
+    assert "detailssummary" in g.overview_storage
+    assert 'label = "업무/구매관리"' in g.overview_storage
+    assert "ERP" in g.overview_storage
+
 
 def test_build_labels_canonical_dedup(tmp_path):
     """표기가 흔들린 업무명이 canonical 하나로 통일된다."""

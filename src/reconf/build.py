@@ -26,6 +26,7 @@ from .models import (
     RawDoc,
     YearGroup,
 )
+from .storagefmt import render_overview
 from .store import Store
 
 log = get_logger("build")
@@ -81,6 +82,7 @@ def build_ia(
     storages = storages or {}
     pages: list[BuildPage] = []
     biz_map: dict[str, dict[int | None, list[str]]] = {}
+    biz_systems: dict[str, set[str]] = {}
 
     for cluster in clusters:
         for m in cluster.members:
@@ -114,21 +116,27 @@ def build_ia(
             biz_map.setdefault(cluster.business, {}).setdefault(cluster.year, []).append(
                 a.source_page_id
             )
+            if a.system:
+                biz_systems.setdefault(cluster.business, set()).add(a.system)
 
-    tree = BuildTree(
-        businesses=[
+    groups: list[BusinessGroup] = []
+    for biz, years in sorted(biz_map.items()):
+        per_year = {y: len(ids) for y, ids in years.items()}
+        systems = sorted(biz_systems.get(biz, set()))
+        groups.append(
             BusinessGroup(
                 business=biz,
-                index_page_id=f"index-{biz}",
+                business_page_id=f"biz-{biz}",
+                overview_page_id=f"overview-{biz}",
+                worklog_page_id=f"worklog-{biz}",
+                overview_storage=render_overview(biz, systems, per_year),
                 years=[
                     YearGroup(year=y, page_ids=ids)
                     for y, ids in sorted(years.items(), key=lambda kv: str(kv[0]))
                 ],
             )
-            for biz, years in sorted(biz_map.items())
-        ]
-    )
-    return pages, tree
+        )
+    return pages, BuildTree(businesses=groups)
 
 
 def run(

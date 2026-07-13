@@ -134,9 +134,14 @@ class YearGroup(BaseModel):
 
 
 class BusinessGroup(BaseModel):
+    """업무 → {개요, 작업실적 → 연도 → 문서} 3단계 IA."""
+
     business: str
-    index_page_id: str
-    years: list[YearGroup] = Field(default_factory=list)
+    business_page_id: str  # 업무 루트 (biz-<업무>)
+    overview_page_id: str  # 개요 (overview-<업무>)
+    worklog_page_id: str  # 작업실적 (worklog-<업무>)
+    overview_storage: str = ""  # 개요 페이지 본문(storage)
+    years: list[YearGroup] = Field(default_factory=list)  # 작업실적 하위 연도
 
 
 class BuildTree(BaseModel):

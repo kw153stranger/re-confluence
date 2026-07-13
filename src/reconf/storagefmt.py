@@ -59,3 +59,34 @@ def render_page(page: BuildPage) -> str:
         src = escape(page.properties.source)
         backlink = f'<p><a href="{src}">원본 문서 열기 ↗</a></p>'
     return details_macro(page.properties) + content + backlink
+
+
+def report_macro(cql: str) -> str:
+    """Page Properties Report(detailssummary) 매크로 — 개요 페이지에서 하위 문서 집계."""
+    # CQL의 따옴표(구분자)는 보존하고 <>& 만 이스케이프
+    return (
+        '<ac:structured-macro ac:name="detailssummary">'
+        f'<ac:parameter ac:name="cql">{escape(cql, quote=False)}</ac:parameter>'
+        "</ac:structured-macro>"
+    )
+
+
+def render_overview(business: str, systems: list[str], per_year: dict[int | None, int]) -> str:
+    """개요 페이지 본문(storage): 업무 요약 + 연도별 문서수 + Page Properties Report."""
+    sys_txt = ", ".join(escape(s) for s in systems) or "-"
+    years = sorted(y for y in per_year if y is not None)
+    year_rows = "".join(
+        f"<tr><td>{y}</td><td>{per_year[y]}</td></tr>" for y in years
+    )
+    year_table = (
+        "<table><tbody><tr><th>연도</th><th>문서 수</th></tr>" + year_rows + "</tbody></table>"
+        if year_rows
+        else ""
+    )
+    return (
+        f"<h1>{escape(business)} 개요</h1>"
+        f"<p>관련 시스템: {sys_txt}</p>"
+        f"{year_table}"
+        "<h2>작업실적 (Page Properties Report)</h2>"
+        + report_macro(f'label = "업무/{business}"')
+    )

@@ -28,9 +28,16 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / (na * nb))
 
 
+def normalize_task(business: str | None) -> str:
+    """업무(task) 키 정규화 — 공백 축약·트림으로 표기 흔들림 병합 (예: 'SSL  적용'→'SSL 적용')."""
+    if not business:
+        return "미분류"
+    return " ".join(business.split())
+
+
 def group_key(a: AnalysisResult) -> tuple[str, int | None]:
     """업무(+연도) 그룹 키. business가 없으면 '미분류'."""
-    return (a.business or "미분류", a.year)
+    return (normalize_task(a.business), a.year)
 
 
 def pick_canonical(members: list[AnalysisResult], raws: dict[str, RawDoc]) -> str:
