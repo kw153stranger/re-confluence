@@ -28,12 +28,13 @@ class LLMCfg(BaseModel):
 
 
 class EmbeddingsCfg(BaseModel):
-    provider: str = "tei"  # HuggingFace Text Embeddings Inference
-    endpoint: str = "http://localhost:8080"  # TEI 서버 (POST /embed)
+    provider: str = "openai"  # OpenAI 호환 임베딩(TEI OpenAI 모드/vLLM 등)
+    endpoint: str = "http://localhost:8080/v1"  # base URL, 경로는 POST /embeddings
     model: str = "BAAI/bge-m3"
+    api_key: str = ""  # 있으면 Authorization: Bearer (비밀은 환경변수 권장)
     dim: int = 1024
     batch_size: int = 32
-    normalize: bool = True
+    normalize: bool = True  # OpenAI 응답은 원시 벡터 → 클라이언트에서 L2 정규화
     timeout_s: int = 30
     cache: bool = True  # embeddings/<page_id>.json 재사용
 

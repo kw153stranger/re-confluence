@@ -25,22 +25,44 @@ class Embedder(Protocol):
         ...
 
 
-class TEIEmbedder:
-    """HuggingFace Text Embeddings Inference (POST /embed)."""
+def _l2_normalize(vec: list[float]) -> list[float]:
+    import math
+
+    norm = math.sqrt(sum(x * x for x in vec))
+    return [x / norm for x in vec] if norm else vec
+
+
+class OpenAIEmbedder:
+    """OpenAI 호환 임베딩 클라이언트 (POST /embeddings).
+
+    TEI를 OpenAI 호환 모드로 띄우거나 vLLM 등 OpenAI 호환 임베딩 서버를 사용한다.
+    엔드포인트는 base(예: http://localhost:8080/v1), 경로는 /embeddings.
+    """
 
     def __init__(self, cfg: EmbeddingsCfg):
         self.cfg = cfg
-        self._client = httpx.Client(base_url=cfg.endpoint.rstrip("/"), timeout=cfg.timeout_s)
+        headers = {"Authorization": f"Bearer {cfg.api_key}"} if cfg.api_key else {}
+        self._client = httpx.Client(
+            base_url=cfg.endpoint.rstrip("/"), headers=headers, timeout=cfg.timeout_s
+        )
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         out: list[list[float]] = []
         bs = self.cfg.batch_size
         for i in range(0, len(texts), bs):
             batch = texts[i : i + bs]
-            r = self._client.post("/embed", json={"inputs": batch, "normalize": self.cfg.normalize})
+            r = self._client.post("/embeddings", json={"model": self.cfg.model, "input": batch})
             r.raise_for_status()
-            out.extend(r.json())
+            data = sorted(r.json()["data"], key=lambda d: d.get("index", 0))
+            vecs = [d["embedding"] for d in data]
+            if self.cfg.normalize:
+                vecs = [_l2_normalize(v) for v in vecs]
+            out.extend(vecs)
         return out
+
+
+# 하위 호환 별칭 (TEI를 OpenAI 호환 모드로 사용)
+TEIEmbedder = OpenAIEmbedder
 
 
 def ensure(

@@ -38,23 +38,31 @@ class ConfluenceClient(Protocol):
         ...
 
 
-class ConfluenceRestClient:
-    """Confluence Cloud REST v1 기반 실 구현.
+def _pat() -> str:
+    """개인 액세스 토큰(PAT). CONFLUENCE_PAT 우선, 없으면 CONFLUENCE_API_TOKEN."""
+    return os.environ.get("CONFLUENCE_PAT", "") or os.environ.get("CONFLUENCE_API_TOKEN", "")
 
-    인증 토큰은 환경변수로 주입한다(파일 저장 금지):
-      CONFLUENCE_BASE_URL, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN
+
+class ConfluenceRestClient:
+    """Confluence REST v1 기반 실 구현 (개인키/PAT 인증).
+
+    환경변수로 주입한다(파일 저장 금지):
+      CONFLUENCE_BASE_URL, CONFLUENCE_PAT  (Authorization: Bearer <PAT>)
     """
 
     def __init__(self, base_url: str | None = None, timeout: float = 30.0):
         self.base_url = (base_url or os.environ.get("CONFLUENCE_BASE_URL", "")).rstrip("/")
-        email = os.environ.get("CONFLUENCE_EMAIL", "")
-        token = os.environ.get("CONFLUENCE_API_TOKEN", "")
-        if not (self.base_url and email and token):
+        pat = _pat()
+        if not (self.base_url and pat):
             raise RuntimeError(
                 "Confluence 접속 정보가 없습니다. "
-                "CONFLUENCE_BASE_URL/EMAIL/API_TOKEN 환경변수를 설정하세요."
+                "CONFLUENCE_BASE_URL 과 CONFLUENCE_PAT(개인 액세스 토큰) 환경변수를 설정하세요."
             )
-        self._client = httpx.Client(base_url=self.base_url, auth=(email, token), timeout=timeout)
+        self._client = httpx.Client(
+            base_url=self.base_url,
+            headers={"Authorization": f"Bearer {pat}"},
+            timeout=timeout,
+        )
 
     def list_pages(self, space: str) -> list[dict]:
         pages: list[dict] = []
@@ -125,14 +133,17 @@ class ConfluenceRestWriter:
 
     def __init__(self, base_url: str | None = None, timeout: float = 30.0):
         self.base_url = (base_url or os.environ.get("CONFLUENCE_BASE_URL", "")).rstrip("/")
-        email = os.environ.get("CONFLUENCE_EMAIL", "")
-        token = os.environ.get("CONFLUENCE_API_TOKEN", "")
-        if not (self.base_url and email and token):
+        pat = _pat()
+        if not (self.base_url and pat):
             raise RuntimeError(
                 "Confluence 접속 정보가 없습니다. "
-                "CONFLUENCE_BASE_URL/EMAIL/API_TOKEN 환경변수를 설정하세요."
+                "CONFLUENCE_BASE_URL 과 CONFLUENCE_PAT(개인 액세스 토큰) 환경변수를 설정하세요."
             )
-        self._client = httpx.Client(base_url=self.base_url, auth=(email, token), timeout=timeout)
+        self._client = httpx.Client(
+            base_url=self.base_url,
+            headers={"Authorization": f"Bearer {pat}"},
+            timeout=timeout,
+        )
 
     def ensure_space(self, key: str, name: str) -> None:
         r = self._client.get(f"/rest/api/space/{key}")

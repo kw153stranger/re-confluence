@@ -1,5 +1,6 @@
 # Confluence AI 재구성 — 설정 예시 (구현설계 §7)
-# 비밀값(Confluence 토큰 등)은 이 파일이 아닌 환경변수로 주입한다.
+# 비밀값은 이 파일이 아닌 환경변수로 주입한다:
+#   CONFLUENCE_BASE_URL, CONFLUENCE_PAT (개인 액세스 토큰, Authorization: Bearer)
 
 source:
   space: "DOCS"
@@ -11,12 +12,13 @@ llm:
   model: "qwen3-30b-a3b"
   max_retries: 3
 embeddings:
-  provider: "tei"                         # HuggingFace Text Embeddings Inference
-  endpoint: "http://localhost:8080"       # TEI 서버 (POST /embed)
+  provider: "openai"                      # OpenAI 호환 임베딩(TEI OpenAI 모드/vLLM 등)
+  endpoint: "http://localhost:8080/v1"    # base URL, 경로는 POST /embeddings
   model: "BAAI/bge-m3"
+  # api_key: ""                           # 필요 시 Bearer 인증(비밀은 환경변수 권장)
   dim: 1024                               # bge-m3 임베딩 차원
   batch_size: 32                          # 1회 요청 문장 수
-  normalize: true                         # 정규화 후 코사인 유사도
+  normalize: true                         # 응답을 클라이언트에서 L2 정규화
   timeout_s: 30
   cache: true                             # embeddings/<page_id>.json 재사용
 cluster:
