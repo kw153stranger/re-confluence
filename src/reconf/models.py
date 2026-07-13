@@ -28,6 +28,7 @@ class RawDoc(BaseModel):
     original_labels: list[str] = Field(default_factory=list)
     attachments: list[str] = Field(default_factory=list)
     body_markdown: str = ""
+    body_storage: str = ""  # 원본 Confluence storage(XHTML) — 업로드 시 원문 그대로 재사용
 
 
 class Confidence(BaseModel):
@@ -123,6 +124,8 @@ class BuildPage(BaseModel):
     labels: list[str] = Field(default_factory=list)
     properties: PageProperties
     summary: str = ""
+    body_markdown: str = ""  # 원문(Markdown) — fallback
+    body_storage: str = ""  # 원문(Confluence storage XHTML) — 업로드 본문
 
 
 class YearGroup(BaseModel):

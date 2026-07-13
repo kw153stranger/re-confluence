@@ -16,6 +16,7 @@ import itertools
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .. import build as build_stage
@@ -26,6 +27,7 @@ from ..labels import load_registry, merge_alias, save_registry
 from ..models import ReviewDecision, ReviewQueueItem
 from ..store import Store
 from ..vectorstore import SearchHit, VectorStore, make_vectorstore
+from .review_ui import REVIEW_HTML
 
 # 인라인 실행 가능한 단계(외부 서비스 불필요). 나머지는 워커/설정 필요.
 _INLINE_STAGES = {"build", "review", "cluster"}
@@ -78,6 +80,11 @@ def create_app(
         from ..embed import TEIEmbedder
 
         return TEIEmbedder(cfg.embeddings)
+
+    @app.get("/", response_class=HTMLResponse)
+    def index() -> str:
+        """리뷰 승인 화면(검수 큐 조회·승인/반려)."""
+        return REVIEW_HTML
 
     @app.get("/health")
     def health() -> dict[str, Any]:

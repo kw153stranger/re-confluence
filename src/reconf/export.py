@@ -33,6 +33,7 @@ def _page_to_rawdoc(page: dict, attachments: list[dict], base_url: str) -> RawDo
         original_labels=[label.get("name", "") for label in labels],
         attachments=[a.get("title", "") for a in attachments],
         body_markdown=html_to_markdown(body_html),
+        body_storage=body_html,  # 원본 storage 보존 → 업로드 원문 동일성
     )
 
 
@@ -76,6 +77,8 @@ def run(
         saved.append(doc)
         if not dry_run:
             store.write_raw(doc.source_page_id, slugify(doc.title), dump_raw(doc))
+            if doc.body_storage:
+                store.write_storage(doc.source_page_id, doc.body_storage)
             for att in attachments:
                 data = client.download_attachment(att)
                 if data:

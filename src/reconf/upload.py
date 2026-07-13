@@ -13,6 +13,7 @@ from .config import Config
 from .confluence import ConfluenceWriter
 from .logging_setup import get_logger
 from .models import BuildPage, ReviewDecision, UploadResult
+from .storagefmt import render_page
 from .store import Store
 
 log = get_logger("upload")
@@ -32,14 +33,8 @@ def _approved_ids(store: Store) -> set[str] | None:
 
 
 def _page_body(page: BuildPage) -> str:
-    p = page.properties
-    return (
-        f"h1. {page.title}\n\n"
-        f"*업무*: {p.business} | *시스템*: {p.system or ''} | *연도*: {p.year or ''} | "
-        f"*상태*: {p.status}\n\n"
-        f"{page.summary}\n\n"
-        f"[원본|{p.source}]\n"
-    )
+    """업로드 본문 = Page Properties 매크로 + 원문(storage) (§5.3·§6.6)."""
+    return render_page(page)
 
 
 def run(
@@ -79,8 +74,9 @@ def run(
             continue
         try:
             if page.business not in biz_parent and not dry_run:
+                index_body = f"<h1>{page.business}</h1><p>업무 아카이브 인덱스</p>"
                 pid, _ = writer.upsert_page(
-                    space, f"index-{page.business}", page.business, f"h1. {page.business}", None, []
+                    space, f"index-{page.business}", page.business, index_body, None, []
                 )
                 biz_parent[page.business] = pid
             parent = biz_parent.get(page.business)

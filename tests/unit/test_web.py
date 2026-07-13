@@ -48,6 +48,16 @@ def test_health(tmp_path):
     assert r.status_code == 200 and r.json()["status"] == "ok"
 
 
+def test_review_ui_served(tmp_path):
+    store = Store(tmp_path / "vault")
+    store.ensure_dirs()
+    r = _client(store).get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "검수 승인" in r.text
+    assert "/api/review/queue" in r.text  # 프런트가 API를 호출
+
+
 def test_review_queue_endpoint(tmp_path):
     store = Store(tmp_path / "vault")
     _seed_analysis(store, "1", 0.9)

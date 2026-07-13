@@ -76,7 +76,9 @@ def build_ia(
     raws: dict[str, RawDoc],
     reg: LabelRegistry,
     cfg: Config,
+    storages: dict[str, str] | None = None,
 ) -> tuple[list[BuildPage], BuildTree]:
+    storages = storages or {}
     pages: list[BuildPage] = []
     biz_map: dict[str, dict[int | None, list[str]]] = {}
 
@@ -105,6 +107,8 @@ def build_ia(
                     labels=labels,
                     properties=props,
                     summary=a.summary,
+                    body_markdown=raw.body_markdown if raw else "",
+                    body_storage=storages.get(m.source_page_id, ""),
                 )
             )
             biz_map.setdefault(cluster.business, {}).setdefault(cluster.year, []).append(
@@ -138,12 +142,14 @@ def run(
     clusters = _ClusterList.model_validate_json(store.clusters_path.read_text("utf-8")).root
     analyses = {p.stem: store.read_json(p, AnalysisResult) for p in store.list_analysis()}
     raws: dict[str, RawDoc] = {}
+    storages: dict[str, str] = {}
     for p in store.list_raw():
         d = parse_raw(p.read_text(encoding="utf-8"))
         raws[d.source_page_id] = d
+        storages[d.source_page_id] = store.read_storage(d.source_page_id)
 
     reg = load_registry(store)
-    pages, tree = build_ia(clusters, analyses, raws, reg, cfg)
+    pages, tree = build_ia(clusters, analyses, raws, reg, cfg, storages)
 
     if not dry_run:
         for page in pages:

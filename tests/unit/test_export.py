@@ -52,6 +52,8 @@ def test_export_writes_raw(tmp_path):
     # 첨부 바이너리 저장 확인
     att = store.raw_dir / "attachments" / "1" / "정산표.xlsx"
     assert att.exists() and att.read_bytes() == b"BINARY-DATA"
+    # 원본 storage(XHTML) 보존 확인 — 업로드 원문 동일성용
+    assert store.read_storage("1") == "<h1>정산</h1>"
 
 
 def test_export_idempotent_skip_when_unchanged(tmp_path):

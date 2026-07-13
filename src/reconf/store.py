@@ -113,5 +113,19 @@ class Store:
         path.write_bytes(data)
         return path
 
+    def storage_path(self, page_id: str) -> Path:
+        return self.raw_dir / "storage" / f"{page_id}.html"
+
+    def write_storage(self, page_id: str, html: str) -> Path:
+        """원본 Confluence storage(XHTML)를 보존 → 업로드 시 원문 재사용."""
+        path = self.storage_path(page_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding="utf-8")
+        return path
+
+    def read_storage(self, page_id: str) -> str:
+        path = self.storage_path(page_id)
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+
     def list_analysis(self) -> list[Path]:
         return sorted(self.analysis_dir.glob("*.json"))

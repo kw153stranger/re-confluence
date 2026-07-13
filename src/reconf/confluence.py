@@ -106,11 +106,12 @@ class ConfluenceWriter(Protocol):
         space: str,
         source_page_id: str,
         title: str,
-        body_md: str,
+        body_storage: str,
         parent_id: str | None,
         labels: list[str],
     ) -> tuple[str, str]:
-        """source_page_id를 멱등 키로 생성/갱신. (target_page_id, 'created'|'updated') 반환."""
+        """source_page_id를 멱등 키로 생성/갱신. body는 storage(XHTML).
+        (target_page_id, 'created'|'updated') 반환."""
         ...
 
 
@@ -151,7 +152,7 @@ class ConfluenceRestWriter:
         space: str,
         source_page_id: str,
         title: str,
-        body_md: str,
+        body_storage: str,
         parent_id: str | None,
         labels: list[str],
     ) -> tuple[str, str]:
@@ -160,7 +161,7 @@ class ConfluenceRestWriter:
             "type": "page",
             "title": title,
             "space": {"key": space},
-            "body": {"storage": {"value": body_md, "representation": "wiki"}},
+            "body": {"storage": {"value": body_storage, "representation": "storage"}},
         }
         if parent_id:
             payload["ancestors"] = [{"id": parent_id}]

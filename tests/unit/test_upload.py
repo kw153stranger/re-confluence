@@ -16,12 +16,14 @@ class FakeWriter:
     def __init__(self):
         self.pages: dict[str, str] = {}  # source_id -> target_id
         self.spaces: list[str] = []
+        self.bodies: dict[str, str] = {}  # source_id -> uploaded body(storage)
         self._seq = 0
 
     def ensure_space(self, key, name):
         self.spaces.append(key)
 
-    def upsert_page(self, space, source_page_id, title, body_md, parent_id, labels):
+    def upsert_page(self, space, source_page_id, title, body_storage, parent_id, labels):
+        self.bodies[source_page_id] = body_storage
         if source_page_id in self.pages:
             return self.pages[source_page_id], "updated"
         self._seq += 1
@@ -37,12 +39,13 @@ def _seed_build(store, pages):
     )
 
 
-def _page(pid, business="구매관리"):
+def _page(pid, business="구매관리", body_storage="<p>원본 본문 내용</p>"):
     return BuildPage(
         source_page_id=pid, title=f"제목{pid}", business=business, year=2024, role="canonical",
         labels=["업무/구매관리", "연도/2024"],
-        properties=PageProperties(business=business, source=f"https://cf/{pid}"),
-        summary="요약",
+        properties=PageProperties(business=business, system="ERP", year=2024,
+                                  source=f"https://cf/{pid}"),
+        summary="요약", body_storage=body_storage,
     )
 
 
@@ -69,6 +72,21 @@ def test_upload_only_approved_and_idempotent(tmp_path):
     assert {r.source_page_id: r.status for r in results2}["1"] == "updated"
     # 승인 1건에 대해 target 페이지는 1개(+업무 index)만 존재
     assert len([k for k in w.pages if not k.startswith("index-")]) == 1
+
+
+def test_uploaded_body_includes_original_content_and_properties(tmp_path):
+    store = Store(tmp_path / "vault")
+    _seed_build(store, [_page("1", body_storage="<h2>절차</h2><p>원본 상세 내용</p>")])
+    _approve(store, ["1"])
+    w = FakeWriter()
+    upload.run(Config(), store, target_space="RE", writer=w)
+    body = w.bodies["1"]
+    # 원문 동일 포함
+    assert "<h2>절차</h2><p>원본 상세 내용</p>" in body
+    # Page Properties 매크로 + 표준 필드
+    assert 'ac:name="details"' in body
+    assert "업무명" in body and "구매관리" in body
+    assert "시스템" in body and "ERP" in body
 
 
 def test_upload_partial_failure_isolated(tmp_path):
