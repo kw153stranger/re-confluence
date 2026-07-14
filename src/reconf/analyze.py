@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from .config import Config
 from .llm import LLMClient, complete_json
-from .logging_setup import get_logger
+from .logging_setup import get_logger, progress
 from .markdown import parse_raw
 from .models import AnalysisResult, RawDoc
 from .prompts import (
@@ -63,7 +63,10 @@ def run(
 
     results: list[AnalysisResult] = []
     skipped = 0
-    for raw_path in store.list_raw():
+    raw_paths = store.list_raw()
+    total = len(raw_paths)
+    for idx, raw_path in enumerate(raw_paths, 1):
+        progress(log, "Analyze", idx, total)
         doc = parse_raw(raw_path.read_text(encoding="utf-8"))
         out_path = store.analysis_path(doc.source_page_id)
         if resume and store.exists(out_path):
@@ -75,8 +78,6 @@ def run(
         results.append(result)
         if not dry_run:
             store.write_json(out_path, result)
-        log.info("[Analyze] %s → %s (conf.business=%.2f)",
-                 doc.source_page_id, result.business, result.confidence.business)
 
     log.info("[Analyze] 분석 %d건, 스킵 %d건", len(results), skipped)
     return results

@@ -11,7 +11,7 @@ from pydantic import RootModel
 
 from .config import Config
 from .labels import load_registry, resolve_label, save_registry
-from .logging_setup import get_logger
+from .logging_setup import get_logger, progress
 from .markdown import parse_raw
 from .models import (
     STATUS_CANONICAL,
@@ -84,8 +84,12 @@ def build_ia(
     biz_map: dict[str, dict[int | None, list[str]]] = {}
     biz_systems: dict[str, set[str]] = {}
 
+    total = sum(len(c.members) for c in clusters)
+    done = 0
     for cluster in clusters:
         for m in cluster.members:
+            done += 1
+            progress(log, "Build", done, total)
             a = analyses.get(m.source_page_id)
             if a is None:
                 continue

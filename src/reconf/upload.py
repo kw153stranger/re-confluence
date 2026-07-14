@@ -11,7 +11,7 @@ from pydantic import RootModel
 
 from .config import Config
 from .confluence import ConfluenceWriter
-from .logging_setup import get_logger
+from .logging_setup import get_logger, progress
 from .models import BuildPage, BuildTree, BusinessGroup, ReviewDecision, UploadResult
 from .storagefmt import render_page
 from .store import Store
@@ -107,7 +107,9 @@ def run(
         return year_pid[key]
 
     results: list[UploadResult] = []
-    for page in pages:
+    total = len(pages)
+    for idx, page in enumerate(pages, 1):
+        progress(log, "Upload", idx, total)
         if approved is not None and page.source_page_id not in approved:
             results.append(UploadResult(source_page_id=page.source_page_id, status="skipped"))
             continue

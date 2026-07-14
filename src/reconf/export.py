@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from .config import Config
 from .confluence import ConfluenceClient
-from .logging_setup import get_logger
+from .logging_setup import get_logger, progress
 from .markdown import dump_raw, html_to_markdown, parse_raw, slugify
 from .models import RawDoc
 from .store import Store
@@ -65,7 +65,9 @@ def run(
     base_url = getattr(client, "base_url", "")
     saved: list[RawDoc] = []
     skipped = 0
-    for meta in pages:
+    total = len(pages)
+    for idx, meta in enumerate(pages, 1):
+        progress(log, "Export", idx, total)
         page_id = str(meta.get("id", ""))
         full = client.get_page(page_id)
         new_updated = full.get("version", {}).get("when")

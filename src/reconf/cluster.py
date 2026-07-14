@@ -13,7 +13,7 @@ from rapidfuzz import fuzz
 from . import embed
 from .config import Config
 from .embed import Embedder
-from .logging_setup import get_logger
+from .logging_setup import get_logger, progress
 from .markdown import parse_raw
 from .models import AnalysisResult, Cluster, ClusterMember, RawDoc
 from .store import Store
@@ -127,7 +127,9 @@ def run(
 
     # 임베딩(캐시 재사용/생성)
     vectors: dict[str, np.ndarray] = {}
-    for a in results:
+    total = len(results)
+    for idx, a in enumerate(results, 1):
+        progress(log, "Cluster", idx, total)
         raw = raws.get(a.source_page_id)
         text = raw.body_markdown if raw else a.summary
         rec = embed.ensure(store, cfg.embeddings, a.source_page_id, text, embedder)
