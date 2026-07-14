@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from .concurrency import run_concurrent
 from .config import Config
 from .confluence import ConfluenceClient
-from .logging_setup import get_logger, progress
+from .logging_setup import ProgressCounter, get_logger
 from .markdown import dump_raw, html_to_markdown, parse_raw, slugify
 from .models import RawDoc
 from .store import Store
@@ -63,28 +64,37 @@ def run(
     log.info("[Export] space=%s pages=%d", space, len(pages))
 
     base_url = getattr(client, "base_url", "")
-    saved: list[RawDoc] = []
-    skipped = 0
-    total = len(pages)
-    for idx, meta in enumerate(pages, 1):
-        progress(log, "Export", idx, total)
-        page_id = str(meta.get("id", ""))
-        full = client.get_page(page_id)
-        new_updated = full.get("version", {}).get("when")
-        if new_updated and _existing_updated_at(store, page_id) == new_updated:
-            skipped += 1
-            continue  # 멱등: 수정일 동일 → 재저장 생략
-        attachments = client.get_attachments(page_id)
-        doc = _page_to_rawdoc(full, attachments, base_url)
-        saved.append(doc)
-        if not dry_run:
-            store.write_raw(doc.source_page_id, slugify(doc.title), dump_raw(doc))
-            if doc.body_storage:
-                store.write_storage(doc.source_page_id, doc.body_storage)
-            for att in attachments:
-                data = client.download_attachment(att)
-                if data:
-                    store.write_attachment(page_id, att.get("title", "attachment"), data)
+    counter = ProgressCounter(log, "Export", len(pages))
 
-    log.info("[Export] 저장 %d건, 스킵(변경없음) %d건 (dry_run=%s)", len(saved), skipped, dry_run)
+    def work(meta: dict) -> tuple[str, RawDoc | None]:
+        counter.tick()
+        page_id = str(meta.get("id", ""))
+        try:
+            full = client.get_page(page_id)
+            new_updated = full.get("version", {}).get("when")
+            if new_updated and _existing_updated_at(store, page_id) == new_updated:
+                return ("skip", None)  # 멱등: 수정일 동일 → 재저장 생략
+            attachments = client.get_attachments(page_id)
+            doc = _page_to_rawdoc(full, attachments, base_url)
+            if not dry_run:
+                store.write_raw(doc.source_page_id, slugify(doc.title), dump_raw(doc))
+                if doc.body_storage:
+                    store.write_storage(doc.source_page_id, doc.body_storage)
+                for att in attachments:
+                    data = client.download_attachment(att)
+                    if data:
+                        store.write_attachment(page_id, att.get("title", "attachment"), data)
+            return ("saved", doc)
+        except Exception as e:  # noqa: BLE001 - 페이지 단위 오류 격리
+            log.warning("[Export] %s 실패: %s", page_id, e)
+            return ("error", None)
+
+    rows = run_concurrent(work, pages, cfg.concurrency.export)
+    saved = [d for status, d in rows if status == "saved" and d is not None]
+    skipped = sum(1 for status, _ in rows if status == "skip")
+    errors = sum(1 for status, _ in rows if status == "error")
+    log.info(
+        "[Export] 저장 %d · 스킵(변경없음) %d · 실패 %d (dry_run=%s)",
+        len(saved), skipped, errors, dry_run,
+    )
     return saved

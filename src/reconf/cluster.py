@@ -11,9 +11,10 @@ import numpy as np
 from rapidfuzz import fuzz
 
 from . import embed
+from .concurrency import run_concurrent
 from .config import Config
 from .embed import Embedder
-from .logging_setup import get_logger, progress
+from .logging_setup import ProgressCounter, get_logger
 from .markdown import parse_raw
 from .models import AnalysisResult, Cluster, ClusterMember, RawDoc
 from .store import Store
@@ -125,15 +126,19 @@ def run(
         d = parse_raw(p.read_text(encoding="utf-8"))
         raws[d.source_page_id] = d
 
-    # 임베딩(캐시 재사용/생성)
-    vectors: dict[str, np.ndarray] = {}
-    total = len(results)
-    for idx, a in enumerate(results, 1):
-        progress(log, "Cluster", idx, total)
+    # 임베딩(캐시 재사용/생성) — TEI I/O 이므로 동시 처리. build_clusters는 배리어(순차).
+    counter = ProgressCounter(log, "Cluster", len(results))
+
+    def work(a: AnalysisResult) -> tuple[str, np.ndarray]:
+        counter.tick()
         raw = raws.get(a.source_page_id)
         text = raw.body_markdown if raw else a.summary
         rec = embed.ensure(store, cfg.embeddings, a.source_page_id, text, embedder)
-        vectors[a.source_page_id] = np.array(rec.vector, dtype=float)
+        return a.source_page_id, np.array(rec.vector, dtype=float)
+
+    vectors: dict[str, np.ndarray] = dict(
+        run_concurrent(work, results, cfg.concurrency.analyze)
+    )
 
     clusters = build_clusters(results, raws, vectors, sim_threshold=cfg.cluster.sim_threshold)
     n_dup = sum(1 for c in clusters for m in c.members if m.role == "duplicate")

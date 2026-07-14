@@ -21,6 +21,9 @@ embeddings:
   normalize: true                         # 응답을 클라이언트에서 L2 정규화
   timeout_s: 30
   cache: true                             # embeddings/<page_id>.json 재사용
+concurrency:
+  export: 8                                # Confluence 페이지 동시 수집(레이트리밋 상한)
+  analyze: 4                               # LLM/임베딩 동시 호출(Analyze·Cluster). 1이면 순차
 cluster:
   sim_threshold: 0.90
 labels:

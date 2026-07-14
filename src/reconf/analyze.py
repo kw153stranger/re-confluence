@@ -6,9 +6,10 @@ raw/*.md 를 읽어 문서별 AnalysisResult 를 생성/저장한다.
 
 from __future__ import annotations
 
+from .concurrency import run_concurrent
 from .config import Config
 from .llm import LLMClient, complete_json
-from .logging_setup import get_logger, progress
+from .logging_setup import ProgressCounter, get_logger
 from .markdown import parse_raw
 from .models import AnalysisResult, RawDoc
 from .prompts import (
@@ -61,23 +62,29 @@ def run(
 
         client = OpenAICompatClient(cfg.llm.endpoint, cfg.llm.model)
 
-    results: list[AnalysisResult] = []
-    skipped = 0
     raw_paths = store.list_raw()
-    total = len(raw_paths)
-    for idx, raw_path in enumerate(raw_paths, 1):
-        progress(log, "Analyze", idx, total)
+    counter = ProgressCounter(log, "Analyze", len(raw_paths))
+
+    def work(raw_path) -> tuple[str, AnalysisResult | None]:
+        counter.tick()
         doc = parse_raw(raw_path.read_text(encoding="utf-8"))
         out_path = store.analysis_path(doc.source_page_id)
         if resume and store.exists(out_path):
-            skipped += 1
-            continue
-        result = analyze_doc(
-            client, doc, max_retries=cfg.llm.max_retries, chunk_chars=cfg.llm.chunk_chars
-        )
-        results.append(result)
+            return ("skip", None)
+        try:
+            result = analyze_doc(
+                client, doc, max_retries=cfg.llm.max_retries, chunk_chars=cfg.llm.chunk_chars
+            )
+        except Exception as e:  # noqa: BLE001 - 문서 단위 오류 격리
+            log.warning("[Analyze] %s 실패: %s", doc.source_page_id, e)
+            return ("error", None)
         if not dry_run:
             store.write_json(out_path, result)
+        return ("ok", result)
 
-    log.info("[Analyze] 분석 %d건, 스킵 %d건", len(results), skipped)
+    rows = run_concurrent(work, raw_paths, cfg.concurrency.analyze)
+    results = [r for status, r in rows if status == "ok" and r is not None]
+    skipped = sum(1 for status, _ in rows if status == "skip")
+    errors = sum(1 for status, _ in rows if status == "error")
+    log.info("[Analyze] 분석 %d · 스킵 %d · 실패 %d", len(results), skipped, errors)
     return results

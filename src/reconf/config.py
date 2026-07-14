@@ -64,6 +64,13 @@ class WebCfg(BaseModel):
     port: int = 8000
 
 
+class ConcurrencyCfg(BaseModel):
+    """단계 내부 동시성 상한(레이트리밋 대비). 1이면 순차."""
+
+    export: int = 8  # Confluence 페이지 동시 수집
+    analyze: int = 4  # LLM/임베딩 동시 호출(Analyze·Cluster 임베딩)
+
+
 class Config(BaseModel):
     source: SourceCfg = Field(default_factory=SourceCfg)
     target: TargetCfg = Field(default_factory=TargetCfg)
@@ -73,6 +80,7 @@ class Config(BaseModel):
     labels: LabelsCfg = Field(default_factory=LabelsCfg)
     db: DBCfg = Field(default_factory=DBCfg)
     web: WebCfg = Field(default_factory=WebCfg)
+    concurrency: ConcurrencyCfg = Field(default_factory=ConcurrencyCfg)
     vault: str = "./vault"
 
     @classmethod

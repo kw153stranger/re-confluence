@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 _CONFIGURED = False
 
@@ -39,3 +40,21 @@ def progress(log: logging.Logger, stage: str, done: int, total: int, step_pct: i
     every = max(1, total * step_pct // 100)
     if done == 1 or done == total or done % every == 0:
         log.info("[%s] 진행 %d/%d (%d%%)", stage, done, total, done * 100 // total)
+
+
+class ProgressCounter:
+    """동시성(스레드) 환경에서 안전하게 진행률을 집계·표시한다."""
+
+    def __init__(self, log: logging.Logger, stage: str, total: int, step_pct: int = 5):
+        self._log = log
+        self._stage = stage
+        self._total = total
+        self._step_pct = step_pct
+        self._done = 0
+        self._lock = threading.Lock()
+
+    def tick(self) -> None:
+        with self._lock:
+            self._done += 1
+            done = self._done
+        progress(self._log, self._stage, done, self._total, self._step_pct)
