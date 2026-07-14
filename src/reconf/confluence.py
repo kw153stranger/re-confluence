@@ -124,12 +124,11 @@ class ConfluenceWriter(Protocol):
 
 
 class ConfluenceRestWriter:
-    """Confluence REST 쓰기 구현(개요). source_page_id는 페이지 property로 저장해 멱등.
+    """Confluence REST 쓰기 구현. source_page_id를 신규 페이지의 `src-<id>` 라벨로 저장해 멱등.
 
-    실 사용 시 CONFLUENCE_* 환경변수가 필요하다(원본과 분리된 신규 Space 대상).
+    신규/기존 판단은 대상 Space의 라벨을 CQL로 조회한다(로컬 매핑 아님).
+    상세는 docs/페이지ID관리.md. 실 사용 시 CONFLUENCE_* 환경변수 필요.
     """
-
-    PROP_KEY = "reconf_source_id"
 
     def __init__(self, base_url: str | None = None, timeout: float = 30.0):
         self.base_url = (base_url or os.environ.get("CONFLUENCE_BASE_URL", "")).rstrip("/")
@@ -151,12 +150,16 @@ class ConfluenceRestWriter:
             return
         self._client.post("/rest/api/space", json={"key": key, "name": name}).raise_for_status()
 
-    def _find_by_source(self, space: str, source_page_id: str) -> str | None:
+    def _find_by_source(self, space: str, source_page_id: str) -> tuple[str, int] | None:
+        """대상 Space에서 src-<id> 라벨 페이지를 조회 → (page_id, version_number). 없으면 None."""
         cql = f'space="{space}" and label="src-{source_page_id}"'
-        r = self._client.get("/rest/api/content/search", params={"cql": cql})
+        r = self._client.get("/rest/api/content/search", params={"cql": cql, "expand": "version"})
         r.raise_for_status()
         results = r.json().get("results", [])
-        return results[0]["id"] if results else None
+        if not results:
+            return None
+        page = results[0]
+        return page["id"], int(page.get("version", {}).get("number", 1))
 
     def upsert_page(
         self,
@@ -177,8 +180,11 @@ class ConfluenceRestWriter:
         if parent_id:
             payload["ancestors"] = [{"id": parent_id}]
         if existing:
-            self._client.put(f"/rest/api/content/{existing}", json=payload).raise_for_status()
-            return existing, "updated"
+            page_id, version = existing
+            # Confluence 업데이트는 version.number 증가가 필수
+            payload["version"] = {"number": version + 1}
+            self._client.put(f"/rest/api/content/{page_id}", json=payload).raise_for_status()
+            return page_id, "updated"
         r = self._client.post("/rest/api/content", json=payload)
         r.raise_for_status()
         pid = r.json()["id"]
