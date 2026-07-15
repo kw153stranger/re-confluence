@@ -20,6 +20,7 @@
 | ✅ 실행 태스크 | [`docs/실행태스크.md`](docs/실행태스크.md) | 마일스톤별 체크리스트 + 수용기준(DoD) (M0~M6) |
 | 🔎 단계별 점검 | [`docs/단계별점검리스트.md`](docs/단계별점검리스트.md) | 각 단계 실행 후 점검 항목·확인 방법·대응 |
 | 🆔 페이지 ID 관리 | [`docs/페이지ID관리.md`](docs/페이지ID관리.md) | 원본↔신규 ID 연결·멱등 업로드(신규/업데이트 구분) |
+| 🧭 메뉴 구조 개선 | [`docs/메뉴구조개선방안.md`](docs/메뉴구조개선방안.md) | Metadata+Path+Ontology 중심 메뉴 추천(임베딩 보조)·구현 반영 현황 |
 | 🧩 코어 코드 | [`src/reconf/`](src/reconf) | `reconf` CLI 6단계 파이프라인·모델·설정·저장소 |
 | 🌐 웹서비스·벡터DB | [`src/reconf/web/`](src/reconf/web) · [`migrations/`](migrations) | FastAPI(검수·검색·오케스트레이션) + pgvector 스키마 (M6) |
 | 🅜 목업 허브 | [`mockups/index.html`](mockups/index.html) | 3개 목업으로 이동하는 시작 페이지 |

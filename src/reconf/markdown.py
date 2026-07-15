@@ -38,6 +38,7 @@ _FM_FIELDS = (
     "updated_at",
     "original_labels",
     "attachments",
+    "path",
 )
 
 

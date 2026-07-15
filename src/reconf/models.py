@@ -27,8 +27,9 @@ class RawDoc(BaseModel):
     updated_at: str | None = None
     original_labels: list[str] = Field(default_factory=list)
     attachments: list[str] = Field(default_factory=list)
+    path: list[str] = Field(default_factory=list)  # 기존 메뉴 경로(ancestors 제목)
     body_markdown: str = ""
-    body_storage: str = ""  # 원본 Confluence storage(XHTML) — 업로드 시 원문 그대로 재사용
+    body_storage: str = ""  # 원본 Confluence storage(XHTML) — 업로드 시 재사용
 
 
 class Confidence(BaseModel):
@@ -55,6 +56,12 @@ class AnalysisResult(BaseModel):
     related_pages: list[str] = Field(default_factory=list)
     duplicate_of: str | None = None
     confidence: Confidence = Field(default_factory=Confidence)
+    # 메뉴 개선: 사전 기반 메타데이터(자유 생성 금지) — docs/메뉴구조개선방안.md
+    domain: str | None = None  # Infrastructure/Cloud/Database/Platform/Security/Network
+    technology: str | None = None  # VMware/OpenShift/Kubernetes/Linux/Oracle/Storage/Backup
+    menu_type: str | None = None  # Guide/Runbook/Architecture/Reference …
+    lifecycle: str | None = None  # Planning/Build/Operation/Migration/Retire
+    menu_path: list[str] = Field(default_factory=list)  # 추천 메뉴 경로(온톨로지+메타+Path)
 
 
 class ClusterMember(BaseModel):

@@ -24,6 +24,7 @@ def _page_to_rawdoc(page: dict, attachments: list[dict], base_url: str) -> RawDo
     history = page.get("history", {})
     labels = page.get("metadata", {}).get("labels", {}).get("results", [])
     webui = page.get("_links", {}).get("webui", "")
+    ancestors = page.get("ancestors", [])
     return RawDoc(
         source_page_id=str(page.get("id", "")),
         source_url=f"{base_url}{webui}" if webui else "",
@@ -33,6 +34,7 @@ def _page_to_rawdoc(page: dict, attachments: list[dict], base_url: str) -> RawDo
         updated_at=version.get("when"),
         original_labels=[label.get("name", "") for label in labels],
         attachments=[a.get("title", "") for a in attachments],
+        path=[a.get("title", "") for a in ancestors if a.get("title")],  # 기존 메뉴 경로
         body_markdown=html_to_markdown(body_html),
         body_storage=body_html,  # 원본 storage 보존 → 업로드 원문 동일성
     )

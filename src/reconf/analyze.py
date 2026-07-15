@@ -6,8 +6,10 @@ raw/*.md 를 읽어 문서별 AnalysisResult 를 생성/저장한다.
 
 from __future__ import annotations
 
+from . import menu
 from .concurrency import run_concurrent
 from .config import Config
+from .dictionaries import DOMAIN, LIFECYCLE, MENU_TYPE, TECHNOLOGY, snap
 from .llm import LLMClient, complete_json
 from .logging_setup import ProgressCounter, get_logger
 from .markdown import parse_raw
@@ -41,11 +43,18 @@ def condense_body(client: LLMClient, doc: RawDoc, chunk_chars: int) -> RawDoc:
 def analyze_doc(
     client: LLMClient, doc: RawDoc, *, max_retries: int = 3, chunk_chars: int = 8000
 ) -> AnalysisResult:
-    doc = condense_body(client, doc, chunk_chars)
-    user = build_analyze_user(doc)
+    condensed = condense_body(client, doc, chunk_chars)
+    user = build_analyze_user(condensed)
     data = complete_json(client, ANALYZE_SYSTEM, user, max_retries=max_retries)
     data["source_page_id"] = doc.source_page_id  # 입력 id로 강제 고정
-    return AnalysisResult.model_validate(data)
+    result = AnalysisResult.model_validate(data)
+    # 사전 스냅(자유 생성 → 표준 값) + 추천 메뉴 경로 (docs/메뉴구조개선방안.md)
+    result.domain = snap(result.domain, DOMAIN)
+    result.technology = snap(result.technology, TECHNOLOGY)
+    result.menu_type = snap(result.menu_type, MENU_TYPE)
+    result.lifecycle = snap(result.lifecycle, LIFECYCLE)
+    result.menu_path = menu.recommend(result, doc.path)
+    return result
 
 
 def run(
