@@ -131,30 +131,28 @@ class BuildPage(BaseModel):
     labels: list[str] = Field(default_factory=list)
     properties: PageProperties
     summary: str = ""
+    menu_path: list[str] = Field(default_factory=list)  # 온톨로지 메뉴 경로(문서 배치 위치)
     body_markdown: str = ""  # 원문(Markdown) — fallback
     body_storage: str = ""  # 원문(Confluence storage XHTML) — 업로드 본문
 
 
-class YearGroup(BaseModel):
-    year: int | None = None
-    page_ids: list[str] = Field(default_factory=list)
+class MenuNode(BaseModel):
+    """온톨로지 메뉴 트리 노드 (menu_path 기반). 문서 개선방안 §4·Ontology."""
 
-
-class BusinessGroup(BaseModel):
-    """업무 → {개요, 작업실적 → 연도 → 문서} 3단계 IA."""
-
-    business: str
-    business_page_id: str  # 업무 루트 (biz-<업무>)
-    overview_page_id: str  # 개요 (overview-<업무>)
-    worklog_page_id: str  # 작업실적 (worklog-<업무>)
-    overview_storage: str = ""  # 개요 페이지 본문(storage)
-    years: list[YearGroup] = Field(default_factory=list)  # 작업실적 하위 연도
+    name: str
+    path: list[str] = Field(default_factory=list)  # 루트→이 노드 전체 경로
+    node_key: str = ""  # 멱등 키: "menu:" + "/".join(path)
+    page_ids: list[str] = Field(default_factory=list)  # 이 노드 직속 문서
+    children: list[MenuNode] = Field(default_factory=list)
 
 
 class BuildTree(BaseModel):
-    """업무 중심 Page Tree — build/tree.json."""
+    """메뉴 중심 Page Tree — build/tree.json."""
 
-    businesses: list[BusinessGroup] = Field(default_factory=list)
+    roots: list[MenuNode] = Field(default_factory=list)
+
+
+MenuNode.model_rebuild()  # 자기참조(children) 해석
 
 
 class UploadResult(BaseModel):

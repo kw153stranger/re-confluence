@@ -16,7 +16,7 @@ from reconf.models import (
 )
 from reconf.store import Store
 
-_STRUCT_PREFIXES = ("biz-", "overview-", "worklog-", "year-")
+_STRUCT_PREFIXES = ("menu:",)
 
 
 class FakeWriter:
@@ -51,13 +51,14 @@ def _seed_build(store, pages):
     )
 
 
-def _page(pid, business="구매관리", body_storage="<p>원본 본문 내용</p>"):
+def _page(pid, business="구매관리", body_storage="<p>원본 본문 내용</p>", menu_path=None):
     return BuildPage(
         source_page_id=pid, title=f"제목{pid}", business=business, year=2024, role="canonical",
         labels=["업무/구매관리", "연도/2024"],
         properties=PageProperties(business=business, system="ERP", year=2024,
                                   source=f"https://cf/{pid}"),
         summary="요약", body_storage=body_storage,
+        menu_path=menu_path or ["구매관리"],
     )
 
 
@@ -86,19 +87,18 @@ def test_upload_only_approved_and_idempotent(tmp_path):
     assert w.doc_keys() == ["1"]
 
 
-def test_upload_builds_ia_hierarchy(tmp_path):
-    """업무 → {개요, 작업실적 → 연도 → 문서} 부모 관계 검증."""
+def test_upload_builds_menu_hierarchy(tmp_path):
+    """온톨로지 메뉴 경로(menu_path) 기반 부모 관계 검증."""
     store = Store(tmp_path / "vault")
-    # tree.json 도 함께 생성해 개요 본문을 반영
     store.ensure_dirs()
-    doc = RawDoc(source_page_id="1", title="SSL 인증서 교체", updated_at="2024-01-01",
+    doc = RawDoc(source_page_id="1", title="VMware 운영 가이드", updated_at="2024-01-01",
                  source_url="https://cf/1", author="홍길동")
     store.write_raw("1", "s1", dump_raw(doc))
     store.write_json(store.analysis_path("1"), AnalysisResult(
-        source_page_id="1", title_normalized="SSL 인증서 교체", business="SSL 적용",
-        system="Nginx", year=2024, summary="교체"))
+        source_page_id="1", title_normalized="VMware 운영 가이드", business="가상화",
+        summary="운영", menu_path=["Platform", "VMware", "Operation Guide"]))
     store.clusters_path.write_text(RootModel[list[Cluster]]([
-        Cluster(business="SSL 적용", year=2024,
+        Cluster(business="가상화", year=2024,
                 members=[ClusterMember(source_page_id="1", role="canonical")]),
     ]).model_dump_json(), encoding="utf-8")
     build.run(Config(), store)
@@ -107,17 +107,14 @@ def test_upload_builds_ia_hierarchy(tmp_path):
     w = FakeWriter()
     upload.run(Config(), store, target_space="RE", writer=w)
 
-    # 구조 페이지 생성 확인
-    struct = {"biz-SSL 적용", "overview-SSL 적용", "worklog-SSL 적용", "year-SSL 적용-2024"}
-    assert struct <= set(w.pages)
-    # 부모 체인: 문서 → 연도 → 작업실적 → 업무 ; 개요 → 업무
-    assert w.parents["1"] == w.pages["year-SSL 적용-2024"]
-    assert w.parents["year-SSL 적용-2024"] == w.pages["worklog-SSL 적용"]
-    assert w.parents["worklog-SSL 적용"] == w.pages["biz-SSL 적용"]
-    assert w.parents["overview-SSL 적용"] == w.pages["biz-SSL 적용"]
-    assert w.parents["biz-SSL 적용"] is None
-    # 개요 본문에 Page Properties Report 매크로
-    assert "detailssummary" in w.bodies["overview-SSL 적용"]
+    # 메뉴 노드 생성 확인
+    for key in ("menu:Platform", "menu:Platform/VMware", "menu:Platform/VMware/Operation Guide"):
+        assert key in w.pages
+    # 부모 체인: 문서 → Operation Guide → VMware → Platform → (루트)
+    assert w.parents["1"] == w.pages["menu:Platform/VMware/Operation Guide"]
+    assert w.parents["menu:Platform/VMware/Operation Guide"] == w.pages["menu:Platform/VMware"]
+    assert w.parents["menu:Platform/VMware"] == w.pages["menu:Platform"]
+    assert w.parents["menu:Platform"] is None
 
 
 def test_uploaded_body_includes_original_content_and_properties(tmp_path):

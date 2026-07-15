@@ -19,14 +19,12 @@ from .models import (
     AnalysisResult,
     BuildPage,
     BuildTree,
-    BusinessGroup,
     Cluster,
     LabelRegistry,
+    MenuNode,
     PageProperties,
     RawDoc,
-    YearGroup,
 )
-from .storagefmt import render_overview
 from .store import Store
 
 log = get_logger("build")
@@ -71,6 +69,30 @@ def _page_markdown(page: BuildPage, raw: RawDoc | None) -> str:
     )
 
 
+def effective_menu_path(a: AnalysisResult) -> list[str]:
+    """문서의 메뉴 경로. menu_path 없으면 업무/미분류로 폴백."""
+    if a.menu_path:
+        return a.menu_path
+    return [a.business] if a.business else ["미분류"]
+
+
+def _insert(roots: list[MenuNode], parts: list[str], page_id: str) -> None:
+    """메뉴 트리에 parts 경로로 문서를 삽입(중간 노드 생성)."""
+    nodes = roots
+    node: MenuNode | None = None
+    prefix: list[str] = []
+    for part in parts:
+        prefix.append(part)
+        found = next((n for n in nodes if n.name == part), None)
+        if found is None:
+            found = MenuNode(name=part, path=list(prefix), node_key="menu:" + "/".join(prefix))
+            nodes.append(found)
+        node = found
+        nodes = found.children
+    if node is not None:
+        node.page_ids.append(page_id)
+
+
 def build_ia(
     clusters: list[Cluster],
     analyses: dict[str, AnalysisResult],
@@ -81,8 +103,7 @@ def build_ia(
 ) -> tuple[list[BuildPage], BuildTree]:
     storages = storages or {}
     pages: list[BuildPage] = []
-    biz_map: dict[str, dict[int | None, list[str]]] = {}
-    biz_systems: dict[str, set[str]] = {}
+    roots: list[MenuNode] = []
 
     total = sum(len(c.members) for c in clusters)
     done = 0
@@ -103,6 +124,7 @@ def build_ia(
                 status=STATUS_DUPLICATE if m.role == "duplicate" else STATUS_CANONICAL,
                 source=raw.source_url if raw else "",
             )
+            menu_path = effective_menu_path(a)
             pages.append(
                 BuildPage(
                     source_page_id=a.source_page_id,
@@ -113,34 +135,14 @@ def build_ia(
                     labels=labels,
                     properties=props,
                     summary=a.summary,
+                    menu_path=menu_path,
                     body_markdown=raw.body_markdown if raw else "",
                     body_storage=storages.get(m.source_page_id, ""),
                 )
             )
-            biz_map.setdefault(cluster.business, {}).setdefault(cluster.year, []).append(
-                a.source_page_id
-            )
-            if a.system:
-                biz_systems.setdefault(cluster.business, set()).add(a.system)
+            _insert(roots, menu_path, a.source_page_id)
 
-    groups: list[BusinessGroup] = []
-    for biz, years in sorted(biz_map.items()):
-        per_year = {y: len(ids) for y, ids in years.items()}
-        systems = sorted(biz_systems.get(biz, set()))
-        groups.append(
-            BusinessGroup(
-                business=biz,
-                business_page_id=f"biz-{biz}",
-                overview_page_id=f"overview-{biz}",
-                worklog_page_id=f"worklog-{biz}",
-                overview_storage=render_overview(biz, systems, per_year),
-                years=[
-                    YearGroup(year=y, page_ids=ids)
-                    for y, ids in sorted(years.items(), key=lambda kv: str(kv[0]))
-                ],
-            )
-        )
-    return pages, BuildTree(businesses=groups)
+    return pages, BuildTree(roots=roots)
 
 
 def run(
@@ -175,5 +177,5 @@ def run(
         save_registry(store, reg)
 
     n_cand = sum(1 for e in reg.entries if e.status == "candidate")
-    log.info("[Build] 페이지 %d · 업무 %d · 라벨후보 %d", len(pages), len(tree.businesses), n_cand)
+    log.info("[Build] 페이지 %d · 메뉴루트 %d · 라벨후보 %d", len(pages), len(tree.roots), n_cand)
     return pages

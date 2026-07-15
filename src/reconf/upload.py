@@ -12,7 +12,7 @@ from pydantic import RootModel
 from .config import Config
 from .confluence import ConfluenceWriter
 from .logging_setup import get_logger, progress
-from .models import BuildPage, BuildTree, BusinessGroup, ReviewDecision, UploadResult
+from .models import BuildPage, ReviewDecision, UploadResult
 from .storagefmt import render_page
 from .store import Store
 
@@ -57,13 +57,6 @@ def run(
     if approved is None:
         log.warning("[Upload] review.json 이 없어 전체를 업로드합니다(검수 생략).")
 
-    # 트리(개요 본문·연도 구조)
-    tree_path = store.build_dir / "tree.json"
-    groups: dict[str, BusinessGroup] = {}
-    if store.exists(tree_path):
-        tree = BuildTree.model_validate_json(tree_path.read_text("utf-8"))
-        groups = {g.business: g for g in tree.businesses}
-
     space = target_space or cfg.target.space
     if writer is None:
         from .confluence import ConfluenceRestWriter
@@ -72,39 +65,20 @@ def run(
     if not dry_run:
         writer.ensure_space(space, "재구성 아카이브")
 
-    # IA: 업무 → {개요, 작업실적 → 연도 → 문서}. 필요한 부모를 지연 생성한다.
-    biz_pid: dict[str, str] = {}
-    overview_done: set[str] = set()
-    worklog_pid: dict[str, str] = {}
-    year_pid: dict[tuple[str, int | None], str] = {}
+    # IA: 온톨로지 메뉴 트리(menu_path). 경로의 각 노드를 지연 생성하고 문서를 리프에 둔다.
+    node_pid: dict[tuple[str, ...], str] = {}
 
-    def _ensure_year_parent(business: str, year: int | None) -> str:
-        """업무→개요/작업실적→연도 체인을 보장하고 연도 페이지 id 반환."""
-        if business not in biz_pid:
-            pid, _ = writer.upsert_page(
-                space, f"biz-{business}", business, f"<h1>{business}</h1>", None, []
-            )
-            biz_pid[business] = pid
-        if business not in overview_done:
-            g = groups.get(business)
-            body = g.overview_storage if g else f"<h1>{business} 개요</h1>"
-            writer.upsert_page(space, f"overview-{business}", "개요", body, biz_pid[business], [])
-            overview_done.add(business)
-        if business not in worklog_pid:
-            pid, _ = writer.upsert_page(
-                space, f"worklog-{business}", "작업실적",
-                "<p>연도별 작업실적</p>", biz_pid[business], [],
-            )
-            worklog_pid[business] = pid
-        key = (business, year)
-        if key not in year_pid:
-            label = str(year) if year is not None else "연도미상"
-            pid, _ = writer.upsert_page(
-                space, f"year-{business}-{year}", label,
-                f"<p>{label}년 작업실적</p>", worklog_pid[business], [],
-            )
-            year_pid[key] = pid
-        return year_pid[key]
+    def _ensure_menu_path(parts: list[str]) -> str | None:
+        """menu_path의 각 노드를 부모 체인으로 보장하고 리프 노드 id 반환."""
+        parent: str | None = None
+        for i, part in enumerate(parts):
+            prefix = tuple(parts[: i + 1])
+            if prefix not in node_pid:
+                key = "menu:" + "/".join(prefix)
+                pid, _ = writer.upsert_page(space, key, part, f"<h1>{part}</h1>", parent, [])
+                node_pid[prefix] = pid
+            parent = node_pid[prefix]
+        return parent
 
     results: list[UploadResult] = []
     total = len(pages)
@@ -117,7 +91,7 @@ def run(
             results.append(UploadResult(source_page_id=page.source_page_id, status="skipped"))
             continue
         try:
-            parent = _ensure_year_parent(page.business, page.year)
+            parent = _ensure_menu_path(page.menu_path or ["미분류"])
             target_id, action = writer.upsert_page(
                 space, page.source_page_id, page.title, _page_body(page), parent, page.labels
             )
